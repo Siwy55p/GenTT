@@ -366,6 +366,11 @@ public sealed class ScriptService
             return "food delivery app, smartphone home screen, social media scrolling, beauty routine, random selfie, unrelated phone gallery";
         }
 
+        if (IsScanner3DContext(context))
+        {
+            return "qr code, barcode, food delivery app, phone gallery, social media scrolling, random selfie, unrelated phone app";
+        }
+
         return string.Empty;
     }
 
@@ -1292,8 +1297,7 @@ public sealed class ScriptService
             SelectedConceptId = original.SelectedConceptId,
             Hook = BuildSourceSafeHook(topic, analysis),
             HookOnScreenText = ShortenForScreen(BuildSourceSafeHook(topic, analysis), 42),
-            HookSearchPhrase = BuildSearchPhraseFromText($"{topic.Title} {analysis.MainThesis}"),
-            EndingSearchPhrase = BuildSearchPhraseFromText($"{topic.Title} {analysis.MostUsefulFragment}")
+            HookSearchPhrase = BuildSearchPhraseFromText($"{topic.Title} {analysis.MainThesis}")
         };
 
         script.Scenes.AddRange(analysis.Steps
@@ -1312,6 +1316,7 @@ public sealed class ScriptService
             ? BuildEndingFromSourceSteps(analysis, original)
             : BuildEndingFromSafeScenes(script.Scenes);
         script.EndingOnScreenText = ShortenForScreen(script.Ending, 42);
+        script.EndingSearchPhrase = BuildSearchPhraseFromText($"{topic.Title} {analysis.MostUsefulFragment} {script.Ending}");
         return script;
     }
 
@@ -1429,7 +1434,7 @@ public sealed class ScriptService
         SourceStep step,
         int index)
     {
-        var voiceOver = EnsureSentence(CapitalizeFirst(step.Text));
+        var voiceOver = EnsureSentence(CapitalizeFirst(EnrichSourceStepVoiceOver(topic, step.Text)));
         var searchPhrase = BuildSearchPhraseForSourceStep(topic, step.Text);
         var avoidVisuals = BuildDomainAvoidVisuals(topic, step.Text);
         return new ScriptScene
@@ -1437,18 +1442,42 @@ public sealed class ScriptService
             Role = "action",
             VoiceOver = voiceOver,
             SourceFactIds = ResolveStepFactIds(step, analysis),
-            NewInformation = BuildSourceStepNewInformation(step.Text, index),
-            OnScreenText = ShortenForScreen(CapitalizeFirst(step.Text), 42),
-            OnScreenEmphasis = ShortenForScreen(CapitalizeFirst(step.Text), 42),
+            NewInformation = BuildSourceStepNewInformation(voiceOver, index),
+            OnScreenText = ShortenForScreen(CapitalizeFirst(voiceOver), 42),
+            OnScreenEmphasis = ShortenForScreen(CapitalizeFirst(voiceOver), 42),
             EstimatedWords = CountWords(voiceOver),
             VisualDescription = $"Osoba wykonuje krok ze zrodla: {voiceOver}",
             SearchPhrase = searchPhrase,
-            SearchPhrases = [searchPhrase, BuildSearchPhraseFromText($"{step.Text} {topic.Title}")],
+            SearchPhrases = BuildSearchPhrasesForSourceStep(topic, step.Text, searchPhrase),
             AvoidVisuals = string.IsNullOrWhiteSpace(avoidVisuals)
                 ? "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll"
                 : $"random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, {avoidVisuals}",
             SceneGoal = "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
         };
+    }
+
+    private static string EnrichSourceStepVoiceOver(SelectedTopic topic, string step)
+    {
+        var normalized = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText} {step}");
+        if (!IsScanner3DContext(normalized))
+        {
+            return step;
+        }
+
+        if (normalized.Contains("wybierz", StringComparison.OrdinalIgnoreCase)
+            && normalized.Contains("obiekt", StringComparison.OrdinalIgnoreCase)
+            && normalized.Contains("faktur", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Wybierz maly nieruchomy obiekt z wyrazna faktura";
+        }
+
+        if (normalized.Contains("sprawdz", StringComparison.OrdinalIgnoreCase)
+            && normalized.Contains("model", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Sprawdz w aplikacji, czy model 3D nie ma brakujacych fragmentow";
+        }
+
+        return step;
     }
 
     private static List<string> ResolveStepFactIds(SourceStep step, SourceAnalysis analysis)
@@ -1487,6 +1516,11 @@ public sealed class ScriptService
             return BuildAiNotesSearchPhrases(step).First();
         }
 
+        if (IsScanner3DContext(normalized))
+        {
+            return BuildScanner3DSearchPhrases(step).First();
+        }
+
         if (normalized.Contains("biurk", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("smieci", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("odloz", StringComparison.OrdinalIgnoreCase)
@@ -1520,6 +1554,74 @@ public sealed class ScriptService
         }
 
         return BuildSearchPhraseFromText($"{step} {topic.Title}");
+    }
+
+    private static List<string> BuildSearchPhrasesForSourceStep(
+        SelectedTopic topic,
+        string step,
+        string primarySearchPhrase)
+    {
+        var normalized = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText} {step}");
+        if (IsScanner3DContext(normalized))
+        {
+            return BuildScanner3DSearchPhrases(step)
+                .Prepend(primarySearchPhrase)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(4)
+                .ToList();
+        }
+
+        return
+        [
+            primarySearchPhrase,
+            BuildSearchPhraseFromText($"{step} {topic.Title}")
+        ];
+    }
+
+    private static bool IsScanner3DContext(string normalized)
+    {
+        return normalized.Contains("skaner 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("skanowanie 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("skanu 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("skan 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("model 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("fotogrametr", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static List<string> BuildScanner3DSearchPhrases(string text)
+    {
+        var normalized = SourceAnalysisDiagnosticsService.Normalize(text);
+        if (normalized.Contains("sprawdz", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("model", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("fragment", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("podglad", StringComparison.OrdinalIgnoreCase))
+        {
+            return
+            [
+                "smartphone photogrammetry 3d model preview",
+                "phone 3d scan model app screen",
+                "3d model preview on phone screen"
+            ];
+        }
+
+        if (normalized.Contains("obejdz", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("kilku stron", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("telefonem", StringComparison.OrdinalIgnoreCase))
+        {
+            return
+            [
+                "person filming small object with smartphone",
+                "smartphone photogrammetry object scan",
+                "phone 3d scanning object on table"
+            ];
+        }
+
+        return
+        [
+            "smartphone photogrammetry object scan",
+            "small textured object smartphone scan close up",
+            "phone 3d scanning object on table"
+        ];
     }
 
     private static bool ContainsUnsupportedNumberPhrase(string value, string sourceText)
@@ -1604,7 +1706,7 @@ public sealed class ScriptService
             logger?.Warning($"Content review repair changed ending. Original={script.Ending}; Fixed={repairedEnding}");
             script.Ending = repairedEnding;
             script.EndingOnScreenText = ShortenForScreen(repairedEnding, 42);
-            script.EndingSearchPhrase = "person writing daily plan in notebook";
+            script.EndingSearchPhrase = BuildSearchPhraseFromText($"{script.Title} {topic.Title} {repairedEnding}");
         }
     }
 
@@ -1629,6 +1731,16 @@ public sealed class ScriptService
         if (steps.Count == 0)
         {
             return string.Empty;
+        }
+
+        var endingContext = SourceAnalysisDiagnosticsService.Normalize(string.Join(
+            " ",
+            analysis.MainThesis,
+            analysis.MostUsefulFragment,
+            string.Join(" ", steps)));
+        if (IsScanner3DContext(endingContext))
+        {
+            return "Sprawdz w aplikacji, czy model 3D nie ma brakujacych fragmentow.";
         }
 
         var first = RemoveTrailingPunctuation(steps[0]);
@@ -2657,9 +2769,15 @@ public sealed class ScriptService
                     Role = "action",
                     VoiceOver = "Wybierz maly nieruchomy obiekt z wyrazna faktura.",
                     NewInformation = "Dobry obiekt do skanu jest nieruchomy i ma wyrazna fakture.",
-                    OnScreenText = "Obiekt i faktura",
-                    VisualDescription = "Na stole lezy maly przedmiot z wyrazna faktura, a telefon ustawia kadr.",
+                    OnScreenText = "Obiekt z faktura",
+                    VisualDescription = "Na stole lezy maly nieruchomy obiekt z wyrazna faktura, a telefon ustawia kadr.",
                     SearchPhrase = "small textured object smartphone scan close up",
+                    SearchPhrases =
+                    [
+                        "small textured object smartphone scan close up",
+                        "smartphone photogrammetry object scan",
+                        "phone 3d scanning object on table"
+                    ],
                     AvoidVisuals = "flat blank wall, moving person, unrelated app interface",
                     SceneGoal = "Dac pierwszy konkretny warunek udanego skanu."
                 },
@@ -2671,6 +2789,12 @@ public sealed class ScriptService
                     OnScreenText = "Obejdz i sprawdz model",
                     VisualDescription = "Telefon porusza sie wokol obiektu, a potem pokazuje podglad modelu 3D.",
                     SearchPhrase = "smartphone photogrammetry 3d model preview",
+                    SearchPhrases =
+                    [
+                        "smartphone photogrammetry 3d model preview",
+                        "phone 3d scan model app screen",
+                        "3d model preview on phone screen"
+                    ],
                     AvoidVisuals = "notification settings, random phone selfie, generic social media recording",
                     SceneGoal = "Pokazac widoczny rezultat i sposob sprawdzenia efektu."
                 }
@@ -3011,6 +3135,11 @@ public sealed class ScriptService
         if (IsAiNotesContext(normalized))
         {
             return BuildAiNotesSearchPhrases(value).First();
+        }
+
+        if (IsScanner3DContext(normalized))
+        {
+            return BuildScanner3DSearchPhrases(value).First();
         }
 
         if (lower.Contains("notatnik")

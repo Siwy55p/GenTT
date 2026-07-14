@@ -458,7 +458,12 @@ public static class QualityGateService
             "wynik" or
             "efekt" or
             "rezultat" or
-            "koniec";
+            "koniec" or
+            "koncu" or
+            "podglad" or
+            "widac" or
+            "widoczny" or
+            "widoczna";
     }
 
     private static string BuildVisualKey(VisualPlanSegment segment)
@@ -582,16 +587,78 @@ public static class QualityGateService
             " ",
             script.Hook,
             script.Ending,
-            string.Join(" ", script.Scenes.Select(scene => $"{scene.VoiceOver} {scene.NewInformation}")),
-            string.Join(" ", visualPlan.Segments.Select(segment => $"{segment.ResultToShow} {segment.VisibleContent}"))));
+            script.HookOnScreenText,
+            script.EndingOnScreenText,
+            script.HookSearchPhrase,
+            script.EndingSearchPhrase,
+            string.Join(
+                " ",
+                script.Scenes.Select(scene =>
+                    $"{scene.VoiceOver} {scene.NewInformation} {scene.OnScreenText} {scene.OnScreenEmphasis} {scene.VisualDescription} {scene.SceneGoal} {scene.SearchPhrase} {string.Join(" ", scene.SearchPhrases)}")),
+            string.Join(
+                " ",
+                visualPlan.Segments.Select(segment =>
+                    $"{segment.VisibleContent} {segment.PersonAction} {segment.PrimaryObject} {segment.ShotType} {segment.MovementStart} {segment.MovementEnd} {segment.ResultToShow} {string.Join(" ", segment.SearchPhrases)}"))));
+
+        var words = text
+            .Split(
+                [' ', '\r', '\n', '\t', '.', ',', ':', ';', '!', '?', '(', ')', '[', ']'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         return text.Contains("przyklad", StringComparison.OrdinalIgnoreCase)
+            || words.Contains("np")
             || text.Contains("demonstrac", StringComparison.OrdinalIgnoreCase)
             || text.Contains("rezultat", StringComparison.OrdinalIgnoreCase)
             || text.Contains("efekt", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("przed", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("po", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("pokaz", StringComparison.OrdinalIgnoreCase);
+            || text.Contains("wizualizac", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("podglad", StringComparison.OrdinalIgnoreCase)
+            || (words.Contains("przed") && words.Contains("po"))
+            || HasVisibleSpecificResult(text)
+            || HasConcreteObjectExample(text)
+            || HasVisibleModelResult(text);
+    }
+
+    private static bool HasVisibleSpecificResult(string text)
+    {
+        var hasVisibilityMarker = text.Contains("widoczn", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("widac", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("ekran pokazuje", StringComparison.OrdinalIgnoreCase);
+        if (!hasVisibilityMarker)
+        {
+            return false;
+        }
+
+        return text.Contains("lista", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("decyzj", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("zadani", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("model", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("plan", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("wynik", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("rezultat", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("fragment", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasConcreteObjectExample(string text)
+    {
+        return (text.Contains("maly obiekt", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("nieruchomy obiekt", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("obiekt z faktura", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("wyrazna faktura", StringComparison.OrdinalIgnoreCase))
+            && (text.Contains("kamien", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("figurk", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("kubek", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("papier", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool HasVisibleModelResult(string text)
+    {
+        return text.Contains("model 3d", StringComparison.OrdinalIgnoreCase)
+            && (text.Contains("ekran", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("aplikac", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("brakujacych fragment", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("kompletn", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("podglad", StringComparison.OrdinalIgnoreCase));
     }
 
     private static IEnumerable<string> ExtractUsefulWords(string value)

@@ -530,7 +530,14 @@ public sealed class ScriptServiceTests
         Assert.Contains("skan 3D", repaired.Hook, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("obiekt", repairedText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("model", repairedText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(repaired.Scenes, scene => scene.SearchPhrase.Contains("scanning", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("brakujacych fragmentow", repairedText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(repaired.Scenes, scene => scene.SearchPhrase.Contains("scan", StringComparison.OrdinalIgnoreCase)
+            || scene.SearchPhrase.Contains("photogrammetry", StringComparison.OrdinalIgnoreCase));
+        Assert.True(
+            repaired.EndingSearchPhrase.Contains("3d", StringComparison.OrdinalIgnoreCase)
+            || repaired.EndingSearchPhrase.Contains("scan", StringComparison.OrdinalIgnoreCase)
+            || repaired.EndingSearchPhrase.Contains("photogrammetry", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("daily plan", repaired.EndingSearchPhrase, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("powiadom", repairedText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("zredukuj", repairedText, StringComparison.OrdinalIgnoreCase);
         Assert.False(diagnostics.Summary.HasUnsupportedClaims);
