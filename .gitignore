@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.rsuser
+
+TikTokGenerator/Output/*
+!TikTokGenerator/Output/.gitkeep
+
+TikTokGenerator/Tools/*
+!TikTokGenerator/Tools/.gitkeep
