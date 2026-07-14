@@ -57,7 +57,7 @@ public sealed class ScriptServiceTests
     }
 
     [Fact]
-    public void ParseScriptOrFallback_WhenJsonIsTruncated_DoesNotThrowAndBuildsAtLeastThreeScenes()
+    public void ParseScriptOrFallback_WhenJsonIsTruncated_DoesNotThrowAndKeepsUsableScenes()
     {
         var topic = CreateTopic();
         var response = """
@@ -81,7 +81,7 @@ public sealed class ScriptServiceTests
 
         Assert.False(string.IsNullOrWhiteSpace(script.Title));
         Assert.False(string.IsNullOrWhiteSpace(script.Hook));
-        Assert.True(script.Scenes.Count >= 3);
+        Assert.True(script.Scenes.Count >= 1);
         Assert.All(script.Scenes, scene => Assert.False(string.IsNullOrWhiteSpace(scene.VoiceOver)));
         Assert.All(script.Scenes, scene => Assert.False(string.IsNullOrWhiteSpace(scene.SearchPhrase)));
         Assert.False(string.IsNullOrWhiteSpace(script.Ending));
@@ -110,7 +110,7 @@ public sealed class ScriptServiceTests
     }
 
     [Fact]
-    public void NormalizeScript_WhenSceneCountIsTooLow_AddsFallbackScenes()
+    public void NormalizeScript_WhenOneSceneIsUseful_DoesNotForceThreeScenes()
     {
         var topic = CreateTopic();
         var script = new ShortScript
@@ -130,12 +130,13 @@ public sealed class ScriptServiceTests
 
         ScriptService.NormalizeScript(script, topic);
 
-        Assert.True(script.Scenes.Count >= 3);
+        Assert.Single(script.Scenes);
         Assert.All(script.Scenes, scene => Assert.False(string.IsNullOrWhiteSpace(scene.SearchPhrase)));
+        Assert.All(script.Scenes, scene => Assert.False(string.IsNullOrWhiteSpace(scene.NewInformation)));
     }
 
     [Fact]
-    public void NormalizeScript_WhenPhoneAppTopicNeedsFallback_AddsPhoneSpecificScene()
+    public void NormalizeScript_WhenPhoneAppTopicHasNoScenes_AddsOnePhoneSpecificFallbackScene()
     {
         var topic = new SelectedTopic
         {
@@ -148,20 +149,13 @@ public sealed class ScriptServiceTests
             Title = topic.Title,
             Hook = "Uporzadkuj telefon w prosty sposob.",
             Ending = "Zostaw tylko to, co pomaga.",
-            Scenes =
-            [
-                new ScriptScene
-                {
-                    VoiceOver = "Usun aplikacje, ktorych nie uzywasz codziennie.",
-                    SearchPhrase = "phone home screen minimalism"
-                }
-            ]
+            Scenes = []
         };
 
         ScriptService.NormalizeScript(script, topic);
 
-        Assert.True(script.Scenes.Count >= 3);
-        Assert.Contains(script.Scenes.Skip(1), scene => scene.SearchPhrase.Contains("smartphone", StringComparison.OrdinalIgnoreCase)
+        Assert.Single(script.Scenes);
+        Assert.Contains(script.Scenes, scene => scene.SearchPhrase.Contains("smartphone", StringComparison.OrdinalIgnoreCase)
             || scene.SearchPhrase.Contains("phone notification", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(script.Scenes, scene => scene.SearchPhrase.Contains("notebook", StringComparison.OrdinalIgnoreCase));
     }

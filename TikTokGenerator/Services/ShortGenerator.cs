@@ -42,12 +42,38 @@ public sealed class ShortGenerator
             logger.Info($"Started generation. ProjectDirectory={projectDirectory}");
             await logger.SaveJsonAsync("topic.json", topic, cancellationToken);
 
-            progress?.Report(new ShortGenerationProgress(5, "Tworze scenariusz w Ollama"));
-            var script = await _scriptService.GenerateScriptAsync(topic, options, logger, cancellationToken);
+            progress?.Report(new ShortGenerationProgress(5, "Analizuje material zrodlowy"));
+            var sourceAnalysis = await _scriptService.AnalyzeSourceAsync(topic, options, logger, cancellationToken);
+            await logger.SaveJsonAsync("source-analysis.json", sourceAnalysis, cancellationToken);
+
+            progress?.Report(new ShortGenerationProgress(12, "Wybieram najlepsza koncepcje"));
+            var conceptSelection = await _scriptService.GenerateConceptsAsync(topic, sourceAnalysis, options, logger, cancellationToken);
+            await logger.SaveJsonAsync("concept-selection.json", conceptSelection, cancellationToken);
+
+            progress?.Report(new ShortGenerationProgress(20, "Tworze scenariusz w Ollama"));
+            var script = await _scriptService.GenerateScriptAsync(
+                topic,
+                sourceAnalysis,
+                conceptSelection.SelectedDirection,
+                options,
+                logger,
+                cancellationToken);
             await SaveJsonAsync(Path.Combine(projectDirectory, "script.json"), script, cancellationToken);
             await logger.SaveJsonAsync("script-normalized.json", script, cancellationToken);
 
-            progress?.Report(new ShortGenerationProgress(25, "Tworze lektora w Piper"));
+            progress?.Report(new ShortGenerationProgress(28, "Recenzuje merytoryke"));
+            var contentReview = await _scriptService.ReviewScriptAsync(topic, sourceAnalysis, script, options, logger, cancellationToken);
+            await logger.SaveJsonAsync("content-review.json", contentReview, cancellationToken);
+            if (contentReview.HasCriticalErrors)
+            {
+                throw new InvalidOperationException("Recenzent merytoryczny znalazl blad krytyczny. Render zostal zatrzymany. Szczegoly sa w debug/content-review.json.");
+            }
+
+            var wordBudget = CalculateWordBudget(topic.Brief.DurationSeconds);
+            script = _scriptService.ShortenToWordBudget(script, wordBudget, logger);
+            await logger.SaveJsonAsync("script-word-budget.json", script, cancellationToken);
+
+            progress?.Report(new ShortGenerationProgress(35, "Tworze lektora w Piper"));
             var audioDirectory = Path.Combine(projectDirectory, "audio");
             var voiceSegments = await _voiceService.GenerateVoiceAsync(script, audioDirectory, options, logger, cancellationToken);
             await logger.SaveJsonAsync("voice-segments.json", voiceSegments, cancellationToken);
@@ -55,7 +81,32 @@ public sealed class ShortGenerator
             await logger.SaveJsonAsync("voice-analysis.json", voiceDiagnostics, cancellationToken);
             ShortDiagnosticsService.LogSummary(logger, "Voice", voiceDiagnostics);
 
-            progress?.Report(new ShortGenerationProgress(45, "Pobieram klipy z Pexels"));
+            if (voiceDiagnostics.Summary.EstimatedDurationSeconds > topic.Brief.DurationSeconds)
+            {
+                progress?.Report(new ShortGenerationProgress(42, "Skracam po pomiarze TTS"));
+                var measuredBudget = CalculateMeasuredWordBudget(
+                    script,
+                    topic.Brief.DurationSeconds,
+                    voiceDiagnostics.Summary.EstimatedDurationSeconds);
+                script = _scriptService.ShortenToWordBudget(script, measuredBudget, logger);
+                await logger.SaveJsonAsync("script-after-tts-shorten.json", script, cancellationToken);
+
+                var shortenedAudioDirectory = Path.Combine(projectDirectory, "audio-shortened");
+                voiceSegments = await _voiceService.GenerateVoiceAsync(script, shortenedAudioDirectory, options, logger, cancellationToken);
+                await logger.SaveJsonAsync("voice-segments-shortened.json", voiceSegments, cancellationToken);
+                voiceDiagnostics = ShortDiagnosticsService.CreateVoiceDiagnostics(topic, script, voiceSegments);
+                await logger.SaveJsonAsync("voice-analysis-shortened.json", voiceDiagnostics, cancellationToken);
+                ShortDiagnosticsService.LogSummary(logger, "Voice after shorten", voiceDiagnostics);
+            }
+
+            progress?.Report(new ShortGenerationProgress(48, "Tworze plan wizualny"));
+            var visualPlan = await _scriptService.CreateVisualPlanAsync(topic, sourceAnalysis, script, options, logger, cancellationToken);
+            await logger.SaveJsonAsync("visual-plan.json", visualPlan, cancellationToken);
+            script = _scriptService.ApplyVisualPlan(script, visualPlan);
+            await logger.SaveJsonAsync("script-with-visual-plan.json", script, cancellationToken);
+            voiceSegments = ApplyScriptMetadataToVoiceSegments(script, voiceSegments);
+
+            progress?.Report(new ShortGenerationProgress(55, "Pobieram klipy z Pexels"));
             var videoDirectory = Path.Combine(projectDirectory, "videos");
             var clips = await _stockVideoService.DownloadVideosAsync(
                 voiceSegments,
@@ -68,6 +119,27 @@ public sealed class ShortGenerator
             var clipDiagnostics = ShortDiagnosticsService.CreateClipDiagnostics(topic, script, voiceSegments, clips);
             await logger.SaveJsonAsync("clip-analysis.json", clipDiagnostics, cancellationToken);
             ShortDiagnosticsService.LogSummary(logger, "Clips", clipDiagnostics);
+
+            progress?.Report(new ShortGenerationProgress(68, "Sprawdzam bramke jakosci"));
+            var qualityGate = QualityGateService.EvaluateBeforeRender(
+                topic,
+                sourceAnalysis,
+                script,
+                contentReview,
+                visualPlan,
+                voiceSegments,
+                clips);
+            await logger.SaveJsonAsync("quality-gate.json", qualityGate, cancellationToken);
+            if (!qualityGate.Passed)
+            {
+                var errors = string.Join(
+                    Environment.NewLine,
+                    qualityGate.Issues
+                        .Where(issue => issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+                        .Select(issue => $"- {issue.Code}: {issue.Message}"));
+                throw new InvalidOperationException(
+                    $"Bramka jakosci zatrzymala render. Wynik: {qualityGate.Score}/{qualityGate.Criteria.Sum(item => item.MaxPoints)}.{Environment.NewLine}{errors}{Environment.NewLine}{Environment.NewLine}Szczegoly: debug/quality-gate.json");
+            }
 
             progress?.Report(new ShortGenerationProgress(70, "Montuje film w FFmpeg"));
             var outputPath = await _videoService.RenderVideoAsync(
@@ -87,7 +159,12 @@ public sealed class ShortGenerator
                 new
                 {
                     topic,
+                    sourceAnalysis,
+                    conceptSelection,
                     script,
+                    contentReview,
+                    visualPlan,
+                    qualityGate,
                     voiceSegments,
                     clips,
                     diagnostics = finalDiagnostics,
@@ -129,5 +206,122 @@ public sealed class ShortGenerator
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = new string(value.Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray());
         return sanitized.Length > 90 ? sanitized[..90] : sanitized;
+    }
+
+    private static int CalculateWordBudget(int durationSeconds)
+    {
+        return Math.Max(18, (int)Math.Floor(Math.Max(durationSeconds, 10) * 2.25));
+    }
+
+    private static int CalculateMeasuredWordBudget(
+        ShortScript script,
+        int durationSeconds,
+        double measuredSeconds)
+    {
+        var currentWords = CountScriptWords(script);
+        if (measuredSeconds <= 0)
+        {
+            return CalculateWordBudget(durationSeconds);
+        }
+
+        return Math.Max(14, (int)Math.Floor(currentWords * durationSeconds / measuredSeconds * 0.92));
+    }
+
+    private static int CountScriptWords(ShortScript script)
+    {
+        return CountWords(script.Hook)
+            + CountWords(script.Ending)
+            + script.Scenes.Sum(scene => CountWords(scene.VoiceOver));
+    }
+
+    private static int CountWords(string value)
+    {
+        return value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
+    }
+
+    private static IReadOnlyList<VoiceSegment> ApplyScriptMetadataToVoiceSegments(
+        ShortScript script,
+        IReadOnlyList<VoiceSegment> voiceSegments)
+    {
+        return voiceSegments.Select(segment =>
+        {
+            if (segment.Name.Equals("hook", StringComparison.OrdinalIgnoreCase))
+            {
+                return CloneVoiceSegment(
+                    segment,
+                    "problem",
+                    [],
+                    "Ustawia problem i obietnice filmu.",
+                    script.HookSearchPhrase,
+                    [script.HookSearchPhrase],
+                    "generic social media recording, unrelated beauty routine, random phone selfie",
+                    segment.VisualDescription);
+            }
+
+            if (segment.Name.Equals("ending", StringComparison.OrdinalIgnoreCase))
+            {
+                return CloneVoiceSegment(
+                    segment,
+                    "cta",
+                    [],
+                    "Domyka obietnice filmu i daje jedno zadanie.",
+                    script.EndingSearchPhrase,
+                    [script.EndingSearchPhrase],
+                    "generic social media recording, unrelated beauty routine, random phone selfie",
+                    segment.VisualDescription);
+            }
+
+            var sceneIndex = ParseSceneIndex(segment.Name);
+            var scene = script.Scenes.ElementAtOrDefault(sceneIndex);
+            if (scene is null)
+            {
+                return segment;
+            }
+
+            return CloneVoiceSegment(
+                segment,
+                scene.Role,
+                scene.SourceFactIds,
+                scene.NewInformation,
+                scene.SearchPhrase,
+                scene.SearchPhrases.Count == 0 ? [scene.SearchPhrase] : scene.SearchPhrases,
+                scene.AvoidVisuals,
+                scene.VisualDescription);
+        }).ToList();
+    }
+
+    private static VoiceSegment CloneVoiceSegment(
+        VoiceSegment segment,
+        string role,
+        List<string> sourceFactIds,
+        string newInformation,
+        string searchPhrase,
+        List<string> searchPhrases,
+        string avoidVisuals,
+        string visualDescription)
+    {
+        return new VoiceSegment
+        {
+            Index = segment.Index,
+            Name = segment.Name,
+            Role = role,
+            Text = segment.Text,
+            SourceFactIds = sourceFactIds,
+            NewInformation = newInformation,
+            OnScreenText = segment.OnScreenText,
+            VisualDescription = visualDescription,
+            SearchPhrase = searchPhrase,
+            SearchPhrases = searchPhrases,
+            AvoidVisuals = avoidVisuals,
+            AudioPath = segment.AudioPath,
+            Duration = segment.Duration
+        };
+    }
+
+    private static int ParseSceneIndex(string segmentName)
+    {
+        return int.TryParse(segmentName.Replace("scene_", string.Empty, StringComparison.OrdinalIgnoreCase), out var value)
+            ? Math.Max(value - 1, 0)
+            : 0;
     }
 }

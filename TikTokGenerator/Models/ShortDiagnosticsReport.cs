@@ -71,6 +71,10 @@ public sealed class SegmentDiagnostics
 
     public string VoiceOver { get; set; } = string.Empty;
 
+    public List<string> SourceFactIds { get; set; } = [];
+
+    public string NewInformation { get; set; } = string.Empty;
+
     public string OnScreenText { get; set; } = string.Empty;
 
     public string VisualDescription { get; set; } = string.Empty;

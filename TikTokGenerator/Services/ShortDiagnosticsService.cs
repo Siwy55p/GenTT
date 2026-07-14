@@ -267,14 +267,16 @@ internal static class ShortDiagnosticsService
     {
         var segments = new List<SegmentInput>
         {
-            new(0, "hook", "hook", script.Hook, script.HookOnScreenText, string.Empty, script.HookSearchPhrase, string.Empty)
+            new(0, "hook", "problem", script.Hook, [], "Ustawia problem i obietnice filmu.", script.HookOnScreenText, string.Empty, script.HookSearchPhrase, string.Empty)
         };
 
         segments.AddRange(script.Scenes.Select((scene, index) => new SegmentInput(
             index + 1,
             $"scene_{index + 1:00}",
-            "scene",
+            string.IsNullOrWhiteSpace(scene.Role) ? "action" : scene.Role,
             scene.VoiceOver,
+            scene.SourceFactIds,
+            scene.NewInformation,
             scene.OnScreenText,
             scene.VisualDescription,
             scene.SearchPhrase,
@@ -283,8 +285,10 @@ internal static class ShortDiagnosticsService
         segments.Add(new SegmentInput(
             segments.Count,
             "ending",
-            "ending",
+            "cta",
             script.Ending,
+            [],
+            "Domyka obietnice filmu i daje jedno zadanie.",
             script.EndingOnScreenText,
             string.Empty,
             script.EndingSearchPhrase,
@@ -298,8 +302,10 @@ internal static class ShortDiagnosticsService
             .Select(segment => new SegmentInput(
                 segment.Index,
                 segment.Name,
-                segment.Name.StartsWith("scene_", StringComparison.OrdinalIgnoreCase) ? "scene" : segment.Name,
+                string.IsNullOrWhiteSpace(segment.Role) ? segment.Name : segment.Role,
                 segment.Text,
+                segment.SourceFactIds,
+                segment.NewInformation,
                 segment.OnScreenText,
                 segment.VisualDescription,
                 segment.SearchPhrase,
@@ -329,6 +335,8 @@ internal static class ShortDiagnosticsService
             Name = input.Name,
             Role = input.Role,
             VoiceOver = input.VoiceOver,
+            SourceFactIds = input.SourceFactIds,
+            NewInformation = input.NewInformation,
             OnScreenText = input.OnScreenText,
             VisualDescription = input.VisualDescription,
             SearchPhrase = input.SearchPhrase,
@@ -360,14 +368,24 @@ internal static class ShortDiagnosticsService
             AddIssue(report, "warning", "script", segment.Name, "storyboard_language", "Segment nadal brzmi jak opis sceny.", segment.VoiceOver, "Popraw voiceOver albo normalizacje.");
         }
 
-        if (segment.Role == "scene" && !segment.HasActionVerb)
+        if (IsSceneSegment(segment) && !segment.HasActionVerb)
         {
             AddIssue(report, "info", "script", segment.Name, "missing_action_verb", "Scena nie ma wyraznego czasownika akcji.", segment.VoiceOver, "Dodaj praktyczny krok: otworz, zapisz, sprawdz, usun, wlacz albo wybierz.");
         }
 
-        if (segment.Role == "scene" && segment.SourceKeywordHits.Count == 0)
+        if (IsSceneSegment(segment) && segment.SourceKeywordHits.Count == 0)
         {
             AddIssue(report, "warning", "merytoryka", segment.Name, "no_source_keyword_overlap", "Scena nie ma widocznego pokrycia slowami z materialu zrodlowego.", segment.VoiceOver, "Sprawdz, czy scena wynika ze zrodla albo uzupelnij material zrodlowy.");
+        }
+
+        if (IsSceneSegment(segment) && string.IsNullOrWhiteSpace(segment.NewInformation))
+        {
+            AddIssue(report, "warning", "merytoryka", segment.Name, "missing_new_information", "Scena nie deklaruje nowej informacji.", segment.VoiceOver, "Uzupelnij pole newInformation.");
+        }
+
+        if (IsSceneSegment(segment) && segment.SourceFactIds.Count == 0)
+        {
+            AddIssue(report, "warning", "merytoryka", segment.Name, "missing_source_fact_ids", "Scena nie ma powiazania z faktem zrodlowym.", segment.VoiceOver, "Dodaj sourceFactIds, np. F1.");
         }
 
         foreach (var evidence in FindUnsupportedNumbers(segment.VoiceOver, topic.SourceText))
@@ -430,7 +448,7 @@ internal static class ShortDiagnosticsService
 
     private static void CompleteSummary(ShortDiagnosticsReport report)
     {
-        report.Summary.PracticalSegmentCount = report.Segments.Count(segment => segment.Role == "scene" && segment.HasActionVerb);
+        report.Summary.PracticalSegmentCount = report.Segments.Count(segment => IsSceneSegment(segment) && segment.HasActionVerb);
         report.Summary.EstimatedDurationSeconds = Math.Round(report.Segments.Sum(segment => segment.DurationSeconds), 3);
         report.Summary.IssueCount = report.Issues.Count;
         report.Summary.WarningCount = report.Issues.Count(issue => issue.Severity.Equals("warning", StringComparison.OrdinalIgnoreCase));
@@ -555,6 +573,11 @@ internal static class ShortDiagnosticsService
             || normalized.Contains("stock video", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsSceneSegment(SegmentDiagnostics segment)
+    {
+        return segment.Name.StartsWith("scene_", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void AddIssue(
         ShortDiagnosticsReport report,
         string severity,
@@ -582,6 +605,8 @@ internal static class ShortDiagnosticsService
         string Name,
         string Role,
         string VoiceOver,
+        List<string> SourceFactIds,
+        string NewInformation,
         string OnScreenText,
         string VisualDescription,
         string SearchPhrase,

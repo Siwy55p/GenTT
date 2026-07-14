@@ -1,7 +1,4 @@
 using System.Diagnostics;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.Drawing.Text;
 using System.Globalization;
 using TikTokGenerator.Models;
 
@@ -40,9 +37,9 @@ public sealed class VideoService
                 70 + i * 20 / Math.Max(voiceSegments.Count, 1),
                 $"Montuje segment {i + 1}/{voiceSegments.Count}"));
 
-            var subtitlePath = Path.Combine(subtitleDirectory, $"{segment.Index:00}_{segment.Name}.png");
-            CreateSubtitleImage(segment.OnScreenText, subtitlePath);
-            logger?.Info($"Created subtitle image segment={segment.Index} path={subtitlePath}");
+            var subtitlePath = Path.Combine(subtitleDirectory, $"{segment.Index:00}_{segment.Name}.ass");
+            await CreateSubtitleFileAsync(segment, subtitlePath, cancellationToken);
+            logger?.Info($"Created dynamic subtitles segment={segment.Index} path={subtitlePath}");
 
             var segmentPath = Path.Combine(segmentDirectory, $"{segment.Index:00}_{segment.Name}.mp4");
             logger?.Info($"Rendering segment={segment.Index} duration={segment.Duration.TotalSeconds:0.###}s clip={clip.FilePath} audio={segment.AudioPath}");
@@ -90,14 +87,10 @@ public sealed class VideoService
         args.Add(clipPath);
         args.Add("-i");
         args.Add(audioPath);
-        args.Add("-loop");
-        args.Add("1");
-        args.Add("-i");
-        args.Add(subtitlePath);
         args.Add("-t");
         args.Add(duration.TotalSeconds.ToString("0.###", CultureInfo.InvariantCulture));
         args.Add("-filter_complex");
-        args.Add("[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30[base];[base][2:v]overlay=0:0:format=auto[v]");
+        args.Add($"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30[base];[base]subtitles='{EscapeFilterPath(subtitlePath)}'[v]");
         args.Add("-map");
         args.Add("[v]");
         args.Add("-map");
@@ -181,57 +174,67 @@ public sealed class VideoService
         }
     }
 
-    private static void CreateSubtitleImage(string text, string outputPath)
+    private static async Task CreateSubtitleFileAsync(
+        VoiceSegment segment,
+        string outputPath,
+        CancellationToken cancellationToken)
     {
-        const int width = 1080;
-        const int height = 1920;
-
-        using var bitmap = new Bitmap(width, height);
-        using var graphics = Graphics.FromImage(bitmap);
-        graphics.Clear(Color.Transparent);
-        graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-
-        var fontSize = text.Length > 120 ? 48 : 58;
-        using var font = new Font("Segoe UI", fontSize, FontStyle.Bold, GraphicsUnit.Pixel);
-        using var textBrush = new SolidBrush(Color.White);
-        using var shadowBrush = new SolidBrush(Color.FromArgb(215, 0, 0, 0));
-        using var borderPen = new Pen(Color.FromArgb(110, 255, 255, 255), 2);
-        using var format = new StringFormat
+        var events = CreateSubtitleEvents(segment.Text, segment.Duration).ToList();
+        if (events.Count == 0)
         {
-            Alignment = StringAlignment.Center,
-            LineAlignment = StringAlignment.Center,
-            Trimming = StringTrimming.Word
+            events.Add(new SubtitleEvent(TimeSpan.Zero, segment.Duration, segment.OnScreenText));
+        }
+
+        var lines = new List<string>
+        {
+            "[Script Info]",
+            "ScriptType: v4.00+",
+            "PlayResX: 1080",
+            "PlayResY: 1920",
+            "ScaledBorderAndShadow: yes",
+            string.Empty,
+            "[V4+ Styles]",
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+            "Style: Default,Segoe UI,62,&H00FFFFFF,&H000000FF,&HCC000000,&H99000000,-1,0,0,0,100,100,0,0,1,5,1,2,90,90,340,1",
+            string.Empty,
+            "[Events]",
+            "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"
         };
 
-        var wrappedText = WrapText(text, 27);
-        var textArea = new RectangleF(90, 1270, 900, 360);
-        var panel = new RectangleF(70, 1235, 940, 430);
+        lines.AddRange(events.Select(item =>
+            $"Dialogue: 0,{FormatAssTime(item.Start)},{FormatAssTime(item.End)},Default,,0,0,0,,{EscapeAssText(WrapText(item.Text, 24))}"));
 
-        using var panelPath = CreateRoundedRectangle(panel, 36);
-        graphics.FillPath(shadowBrush, panelPath);
-        graphics.DrawPath(borderPen, panelPath);
-        graphics.DrawString(wrappedText, font, textBrush, textArea, format);
-
-        bitmap.Save(outputPath, ImageFormat.Png);
+        await File.WriteAllLinesAsync(outputPath, lines, cancellationToken);
     }
 
-    private static GraphicsPath CreateRoundedRectangle(RectangleF bounds, float radius)
+    private static IEnumerable<SubtitleEvent> CreateSubtitleEvents(string text, TimeSpan duration)
     {
-        var path = new GraphicsPath();
-        var diameter = radius * 2;
-        var arc = new RectangleF(bounds.X, bounds.Y, diameter, diameter);
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (words.Length == 0)
+        {
+            yield break;
+        }
 
-        path.AddArc(arc, 180, 90);
-        arc.X = bounds.Right - diameter;
-        path.AddArc(arc, 270, 90);
-        arc.Y = bounds.Bottom - diameter;
-        path.AddArc(arc, 0, 90);
-        arc.X = bounds.X;
-        path.AddArc(arc, 90, 90);
-        path.CloseFigure();
+        var chunkSize = words.Length <= 8 ? words.Length : 4;
+        var chunks = words.Chunk(chunkSize)
+            .Select(chunk => string.Join(' ', chunk))
+            .ToList();
+        var totalSeconds = Math.Max(duration.TotalSeconds, 0.5);
+        var cursor = 0.0;
 
-        return path;
+        foreach (var chunk in chunks)
+        {
+            if (cursor >= totalSeconds)
+            {
+                yield break;
+            }
+
+            var share = CountWords(chunk) / (double)Math.Max(words.Length, 1);
+            var seconds = Math.Max(0.55, totalSeconds * share);
+            var end = Math.Min(totalSeconds, cursor + seconds);
+            yield return new SubtitleEvent(TimeSpan.FromSeconds(cursor), TimeSpan.FromSeconds(end), chunk);
+            cursor = end;
+        }
     }
 
     private static async Task SaveCreditsAsync(
@@ -288,8 +291,37 @@ public sealed class VideoService
         return string.Join(Environment.NewLine, lines.Take(5));
     }
 
+    private static int CountWords(string text)
+    {
+        return text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
+    }
+
+    private static string FormatAssTime(TimeSpan value)
+    {
+        return $"{(int)value.TotalHours}:{value.Minutes:00}:{value.Seconds:00}.{value.Milliseconds / 10:00}";
+    }
+
+    private static string EscapeAssText(string value)
+    {
+        return value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("{", "\\{", StringComparison.Ordinal)
+            .Replace("}", "\\}", StringComparison.Ordinal)
+            .Replace(Environment.NewLine, "\\N", StringComparison.Ordinal);
+    }
+
+    private static string EscapeFilterPath(string path)
+    {
+        return path
+            .Replace("\\", "/", StringComparison.Ordinal)
+            .Replace(":", "\\:", StringComparison.Ordinal)
+            .Replace("'", "\\'", StringComparison.Ordinal);
+    }
+
     private static string EscapeConcatPath(string path)
     {
         return path.Replace("\\", "/", StringComparison.Ordinal).Replace("'", "'\\''", StringComparison.Ordinal);
     }
+
+    private sealed record SubtitleEvent(TimeSpan Start, TimeSpan End, string Text);
 }

@@ -1,10 +1,17 @@
 using TikTokGenerator.Models;
 using TikTokGenerator.Services;
+using System.Text.Json;
 
 namespace TikTokGenerator.Forms;
 
 public partial class MainForm : Form
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true
+    };
+
     private readonly TrendService _trendService;
     private readonly ShortGenerator _shortGenerator;
     private readonly BindingSource _trendBindingSource = new();
@@ -28,6 +35,7 @@ public partial class MainForm : Form
             ?? Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.User)
             ?? Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.Machine)
             ?? string.Empty;
+        briefTextBox.Text = JsonSerializer.Serialize(ContentBrief.CreateDefault(), JsonOptions);
 
         trendsListBox.DataSource = _trendBindingSource;
         trendsListBox.DisplayMember = nameof(Trend.Title);
@@ -39,7 +47,7 @@ public partial class MainForm : Form
         await RunUiTaskAsync(async () =>
         {
             progressBar.Value = 10;
-            statusLabel.Text = "Szukam popularnych tematow...";
+            statusLabel.Text = "Laduje tematy startowe...";
 
             var trends = await _trendService.FindPopularTopicsAsync(
                 countryComboBox.Text,
@@ -48,7 +56,7 @@ public partial class MainForm : Form
             _trendBindingSource.DataSource = trends;
             trendsListBox.SelectedIndex = trends.Count > 0 ? 0 : -1;
             progressBar.Value = 100;
-            statusLabel.Text = $"Znaleziono {trends.Count} tematow.";
+            statusLabel.Text = $"Zaladowano {trends.Count} tematow startowych.";
         });
     }
 
@@ -84,7 +92,8 @@ public partial class MainForm : Form
             {
                 Title = topic,
                 SourceText = sourceText,
-                SourceUrl = sourceUrlTextBox.Text.Trim()
+                SourceUrl = sourceUrlTextBox.Text.Trim(),
+                Brief = ParseBrief()
             };
 
             var options = new ShortGeneratorOptions
@@ -112,6 +121,25 @@ public partial class MainForm : Form
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
         });
+    }
+
+    private ContentBrief ParseBrief()
+    {
+        try
+        {
+            var brief = JsonSerializer.Deserialize<ContentBrief>(briefTextBox.Text, JsonOptions)
+                ?? ContentBrief.CreateDefault();
+            if (brief.DurationSeconds <= 0)
+            {
+                brief.DurationSeconds = 25;
+            }
+
+            return brief;
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"Brief JSON jest niepoprawny: {ex.Message}", ex);
+        }
     }
 
     private Trend GetSelectedTrend(string topic)
@@ -171,6 +199,7 @@ public partial class MainForm : Form
         selectedTopicTextBox.Enabled = enabled;
         sourceTextTextBox.Enabled = enabled;
         sourceUrlTextBox.Enabled = enabled;
+        briefTextBox.Enabled = enabled;
         pexelsApiKeyTextBox.Enabled = enabled;
         trendsListBox.Enabled = enabled;
     }

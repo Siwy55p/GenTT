@@ -25,7 +25,7 @@ public sealed class TrendService
                 Title: topic.Title,
                 Country: country,
                 Category: category,
-                Source: "MVP offline seed",
+                Source: "Zestaw startowy offline",
                 SourceText: topic.SourceText,
                 SourceUrl: topic.SourceUrl,
                 DiscoveredAt: now))
@@ -75,7 +75,7 @@ public sealed class TrendService
         return
         [
             CreateTopic($"Popularny temat w kategorii {category}", category),
-            CreateTopic($"Nowy trend w kraju {country}", category),
+            CreateTopic($"Nowy temat startowy w kraju {country}", category),
             CreateTopic("Krotka ciekawostka do formatu short", category),
             CreateTopic("Lista trzech rzeczy, ktore warto wiedziec", category),
             CreateTopic("Mit kontra fakt w prostym wideo", category)

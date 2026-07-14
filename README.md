@@ -2,17 +2,20 @@
 
 Prosty MVP desktopowy w C# WinForms na .NET 10.
 
-## Pipeline MVP
+## Pipeline
 
-Przycisk `Wygeneruj short` wykonuje teraz jeden przeplyw:
+Przycisk `Wygeneruj short` wykonuje teraz wieloetapowy przeplyw jakosciowy:
 
-1. Ollama + `qwen3:4b` tworzy scenariusz JSON na podstawie materialu zrodlowego.
-2. Scenariusz jest normalizowany i walidowany: osobno `voiceOver`, `onScreenText`, `visualDescription` i `searchPhrase`.
-3. Piper TTS tworzy osobne pliki WAV dla hooka, scen i zakonczenia.
-4. Pexels API pobiera pionowe klipy MP4 dla fraz `searchPhrase`.
-5. Program mierzy dlugosc WAV przez `ffprobe`.
-6. Program tworzy napisy jako przezroczyste obrazy PNG z `onScreenText`.
-7. FFmpeg sklada segmenty 1080x1920, 30 FPS, H.264/AAC do `short.mp4`.
+1. Formularz zbiera temat, material zrodlowy i `Brief JSON` z odbiorca, problemem, celem, tonem i limitem czasu.
+2. Ollama osobno analizuje zrodlo: teza, fakty `F1...`, kroki, przyklady, ograniczenia, ryzykowne twierdzenia i najprzydatniejszy fragment.
+3. Ollama proponuje trzy kierunki scenariusza, ocenia je i wybiera najlepszy.
+4. Ollama pisze scenariusz tresciowy z rolami scen, `sourceFactIds`, `newInformation`, `onScreenEmphasis` i budzetem slow. Ten etap nie tworzy jeszcze planu wizualnego.
+5. Osobne wywolanie Ollamy recenzuje scenariusz merytorycznie: powtorzenia, oczywiste porady, zgodnosc ze zrodlem, obietnica hooka, wykonalnosc i wartosc dla briefu.
+6. Program sprawdza budzet slow, tworzy TTS w Piper, mierzy WAV przez `ffprobe` i automatycznie skraca scenariusz oraz regeneruje TTS, jezeli przekroczy limit z briefu.
+7. Dopiero po tresci powstaje osobny plan wizualny: co widac, akcja osoby, glowny obiekt, typ kadru, ruch, rezultat, zakazy i kilka zapytan Pexels.
+8. Pexels API pobiera kandydatow z kilku zapytan na segment, punktuje ranking, orientacje, czas, duplikaty, zgodnosc z opisem i kare z `avoidVisuals`.
+9. Bramka jakosci liczy wynik 100 pkt i zatrzymuje render przy bledach krytycznych albo wyniku ponizej 80.
+10. FFmpeg sklada segmenty 1080x1920, 30 FPS, H.264/AAC i naklada dynamiczne napisy ASS w bezpiecznej strefie.
 
 Nie ma jeszcze muzyki, publikowania ani generowania wideo przez AI.
 
@@ -45,17 +48,30 @@ Najwazniejsze pliki:
 
 ```text
 debug/debug.log
-debug/ollama-http-response.json
+debug/ollama-source-analysis-http-response.json
+debug/ollama-source-analysis-raw.txt
+debug/source-analysis.json
+debug/ollama-concept-selection-http-response.json
+debug/concept-selection.json
+debug/ollama-script-http-response.json
 debug/ollama-script-raw.txt
 debug/script-normalized.json
 debug/script-quality-report.json
 debug/script-analysis.json
+debug/content-review.json
+debug/script-word-budget.json
+debug/script-after-tts-shorten.json
 debug/voice-segments.json
 debug/voice-analysis.json
+debug/voice-segments-shortened.json
+debug/voice-analysis-shortened.json
+debug/visual-plan.json
+debug/script-with-visual-plan.json
 debug/pexels-clips.json
 debug/clip-analysis.json
-debug/pexels-search-*.json
+debug/pexels-search-*-q*.json
 debug/pexels-selection-*.json
+debug/quality-gate.json
 debug/short-diagnostics.json
 ```
 
@@ -69,19 +85,38 @@ NN_name.screen.txt  - krotki napis ekranowy
 NN_name.visual.txt  - opis kadru / intencja wizualna
 ```
 
+`source-analysis.json` pokazuje fakty i kroki wydobyte ze zrodla. `concept-selection.json` pokazuje trzy kierunki, ich punktacje oraz wybrany kierunek.
+
 `script-quality-report.json` pokazuje ostrzezenia i automatyczne poprawki, na przyklad:
 
 - lektor brzmial jak opis sceny,
 - model podal bledny klucz JSON dla `searchPhrase`,
 - model dodal niepotwierdzona statystyke,
 - napis ekranowy byl zbyt dlugi,
-- brakowalo osobnego opisu wizualnego.
+- brakowalo `sourceFactIds`,
+- brakowalo `newInformation`.
+
+`content-review.json` jest osobna recenzja merytoryczna. Nie pisze filmu od nowa, tylko wskazuje powtorzenia, oczywiste porady, problemy ze zrodlem, niespelniona obietnice, slaba wykonalnosc i sugerowane poprawki.
+
+`visual-plan.json` powstaje po tresci i opisuje obraz dla segmentow: widoczna zawartosc, akcja osoby, glowny obiekt, kadr, ruch, rezultat, `avoidVisuals` i kilka zapytan Pexels.
+
+`quality-gate.json` zawiera punktacje:
+
+- zgodnosc wszystkich twierdzen ze zrodlem: 25,
+- uzytecznosc dla wskazanego odbiorcy: 20,
+- konkretnosc i wykonalnosc: 15,
+- brak powtorzen i logiczna progresja: 10,
+- hook zgodny z payoffem: 10,
+- dopasowanie wizualne: 10,
+- czytelnosc i czas: 10.
+
+Render jest zatrzymywany, gdy wynik jest ponizej 80/100, pojawia sie niepotwierdzone twierdzenie, scena nie ma nowej informacji, brakuje przykladu/demonstracji/rezultatu, TTS przekracza limit albo recenzent merytoryczny wykryje blad krytyczny.
 
 `script-analysis.json`, `voice-analysis.json`, `clip-analysis.json` i `short-diagnostics.json` sa raportami diagnostycznymi dla kolejnych etapow. Kazdy raport ma:
 
 - `summary` z liczba scen, segmentow, ostrzezen, bledow, czasem audio i pokryciem slow ze zrodla,
 - `script` z keywordami zrodla i scenariusza,
-- `segments` z lektorem, napisem ekranowym, opisem wizualnym, fraza Pexels, czasem audio i metrykami,
+- `segments` z rola, lektorem, `sourceFactIds`, `newInformation`, napisem ekranowym, opisem wizualnym, fraza Pexels, czasem audio i metrykami,
 - `issues` z kodem problemu, etapem, segmentem, dowodem i rekomendacja naprawy.
 
 Najwazniejsze kody problemow:
@@ -94,7 +129,7 @@ Najwazniejsze kody problemow:
 - `duplicate_clip_url` - ten sam klip Pexels trafil do wiecej niz jednego segmentu,
 - `generic_visual_description` albo `generic_search_phrase` - opis obrazu/fraza stockowa sa zbyt ogolne.
 
-`pexels-selection-*.json` pokazuje kandydatow z Pexels w kolejnosci rankingu, duplikaty URL-i i wybrany plik MP4. Wybor klipu preferuje trafnosc rankingu Pexels oraz unikanie duplikatow przed dlugoscia filmu.
+`pexels-selection-*.json` pokazuje kandydatow z Pexels z wielu zapytan, miniatury, duplikaty URL-i, kare za `avoidVisuals`, lokalny wynik dopasowania i wybrany plik MP4.
 
 ## Wymagane narzedzia
 
@@ -175,10 +210,15 @@ public class SelectedTopic
 Prompt wymusza:
 
 - pisanie wylacznie na podstawie `SourceText`,
+- osobna analiza zrodla przed scenariuszem,
+- trzy koncepcje z punktacja przed wyborem kierunku,
 - brak dodawania faktow spoza zrodla,
-- maksymalnie okolo 25 sekund,
-- zwrot samego JSON-a,
-- rozdzielenie lektora, napisu ekranowego, opisu wizualnego i frazy Pexels,
+- limit czasu z `Brief JSON`,
+- JSON Schema dla odpowiedzi Ollamy,
+- role scen, `sourceFactIds`, `newInformation` i `onScreenEmphasis`,
+- brak wymuszania minimum trzech scen,
+- osobna recenzja merytoryczna,
+- osobny plan wizualny po tresci,
 - zakaz uzywania w lektorze opisow typu `pierwsza scena`, `widzimy`, `kamera`.
 
 ## Struktura

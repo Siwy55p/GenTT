@@ -48,10 +48,15 @@ public sealed class VoiceService
             {
                 Index = rawSegment.Index,
                 Name = rawSegment.Name,
+                Role = rawSegment.Role,
                 Text = rawSegment.Text,
+                SourceFactIds = rawSegment.SourceFactIds,
+                NewInformation = rawSegment.NewInformation,
                 OnScreenText = rawSegment.OnScreenText,
                 VisualDescription = rawSegment.VisualDescription,
                 SearchPhrase = rawSegment.SearchPhrase,
+                SearchPhrases = rawSegment.SearchPhrases,
+                AvoidVisuals = rawSegment.AvoidVisuals,
                 AudioPath = audioPath,
                 Duration = duration
             });
@@ -64,38 +69,54 @@ public sealed class VoiceService
     {
         var segments = new List<RawVoiceSegment>();
         var firstSearchPhrase = string.IsNullOrWhiteSpace(script.HookSearchPhrase)
-            ? script.Scenes.First().SearchPhrase
+            ? script.Scenes.FirstOrDefault()?.SearchPhrase ?? "person planning task at desk"
             : script.HookSearchPhrase;
         var lastSearchPhrase = string.IsNullOrWhiteSpace(script.EndingSearchPhrase)
-            ? script.Scenes.Last().SearchPhrase
+            ? script.Scenes.LastOrDefault()?.SearchPhrase ?? firstSearchPhrase
             : script.EndingSearchPhrase;
 
         segments.Add(new RawVoiceSegment(
             0,
             "hook",
+            "problem",
             script.Hook,
+            [],
+            "Ustawia problem i obietnice filmu.",
             script.HookOnScreenText,
             "Hook otwierajacy short: kadr ma natychmiast pokazac problem lub praktyczny kontekst.",
-            firstSearchPhrase));
+            firstSearchPhrase,
+            [firstSearchPhrase],
+            "generic social media recording, unrelated beauty routine, random phone selfie"));
 
         for (var i = 0; i < script.Scenes.Count; i++)
         {
+            var scene = script.Scenes[i];
             segments.Add(new RawVoiceSegment(
                 i + 1,
                 $"scene_{i + 1:00}",
-                script.Scenes[i].VoiceOver,
-                script.Scenes[i].OnScreenText,
-                script.Scenes[i].VisualDescription,
-                script.Scenes[i].SearchPhrase));
+                scene.Role,
+                scene.VoiceOver,
+                scene.SourceFactIds,
+                scene.NewInformation,
+                scene.OnScreenText,
+                scene.VisualDescription,
+                scene.SearchPhrase,
+                scene.SearchPhrases.Count == 0 ? [scene.SearchPhrase] : scene.SearchPhrases,
+                scene.AvoidVisuals));
         }
 
         segments.Add(new RawVoiceSegment(
             segments.Count,
             "ending",
+            "cta",
             script.Ending,
+            [],
+            "Domyka obietnice filmu i daje jedno zadanie.",
             script.EndingOnScreenText,
             "Zakonczenie shorta: kadr powinien domykac praktyczna obietnice.",
-            lastSearchPhrase));
+            lastSearchPhrase,
+            [lastSearchPhrase],
+            "generic social media recording, unrelated beauty routine, random phone selfie"));
         return segments;
     }
 
@@ -189,8 +210,13 @@ public sealed class VoiceService
     private sealed record RawVoiceSegment(
         int Index,
         string Name,
+        string Role,
         string Text,
+        List<string> SourceFactIds,
+        string NewInformation,
         string OnScreenText,
         string VisualDescription,
-        string SearchPhrase);
+        string SearchPhrase,
+        List<string> SearchPhrases,
+        string AvoidVisuals);
 }
