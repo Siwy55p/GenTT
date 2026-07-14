@@ -44,11 +44,40 @@ public sealed class ScriptService
         if (TryDeserializeModelOutput(raw, out SourceAnalysis? analysis, out var error) && analysis is not null)
         {
             NormalizeSourceAnalysis(analysis, topic);
+            var rawDiagnostics = SourceAnalysisDiagnosticsService.CreateDiagnostics(topic, analysis);
+            if (logger is not null)
+            {
+                await logger.SaveJsonAsync("source-analysis-diagnostics-raw.json", rawDiagnostics, cancellationToken);
+                LogSourceAnalysisDiagnostics(logger, "raw", rawDiagnostics);
+            }
+
+            SourceAnalysisDiagnosticsService.SanitizeUnsupportedContent(topic, analysis, logger);
+            NormalizeSourceAnalysis(analysis, topic);
+            var diagnostics = SourceAnalysisDiagnosticsService.CreateDiagnostics(topic, analysis);
+            if (logger is not null)
+            {
+                await logger.SaveJsonAsync("source-analysis-diagnostics.json", diagnostics, cancellationToken);
+                LogSourceAnalysisDiagnostics(logger, "sanitized", diagnostics);
+            }
+
+            if (diagnostics.HasBlockingIssues)
+            {
+                throw new InvalidOperationException("Analiza zrodla nadal zawiera niepotwierdzone informacje po sanityzacji. Szczegoly sa w debug/source-analysis-diagnostics.json.");
+            }
+
             return analysis;
         }
 
         logger?.Warning($"Source analysis parse failed: {error}. Using local source analysis fallback.");
-        return CreateFallbackSourceAnalysis(topic);
+        var fallback = CreateFallbackSourceAnalysis(topic);
+        var fallbackDiagnostics = SourceAnalysisDiagnosticsService.CreateDiagnostics(topic, fallback);
+        if (logger is not null)
+        {
+            await logger.SaveJsonAsync("source-analysis-diagnostics.json", fallbackDiagnostics, cancellationToken);
+            LogSourceAnalysisDiagnostics(logger, "fallback", fallbackDiagnostics);
+        }
+
+        return fallback;
     }
 
     public async Task<ScriptConceptSelection> GenerateConceptsAsync(
@@ -385,9 +414,11 @@ public sealed class ScriptService
             - Wydobadz glowna teze.
             - Wypisz fakty jako F1, F2, F3...
             - Wypisz kroki jako S1, S2, S3...
-            - Oddziel przyklady, ograniczenia i ryzykowne twierdzenia.
+            - Oddziel przyklady, ograniczenia i ryzykowne twierdzenia, ale tylko jesli sa literalnie w materiale.
             - Wskaz najbardziej uzyteczny fragment dla odbiorcy z briefu.
-            - Nie dodawaj informacji spoza zrodla.
+            - Nie dodawaj informacji, przykladow, ograniczen, trybow dzialania, dat, procentow ani nazw spoza zrodla.
+            - Jesli zrodlo nie podaje przykladu, zwroc pusta tablice examples.
+            - Jesli zrodlo nie podaje ograniczen, zwroc pusta tablice limitations.
             - Zwracaj wylacznie JSON zgodny ze schematem.
 
             Temat:
@@ -745,6 +776,26 @@ public sealed class ScriptService
             if (analysis.Steps[i].SourceFactIds.Count == 0)
             {
                 analysis.Steps[i].SourceFactIds.Add(analysis.Facts[0].Id);
+            }
+        }
+    }
+
+    private static void LogSourceAnalysisDiagnostics(
+        GenerationDebugLogger logger,
+        string label,
+        SourceAnalysisDiagnostics diagnostics)
+    {
+        logger.Info($"Source analysis diagnostics ({label}): issues={diagnostics.Issues.Count}; blocking={diagnostics.HasBlockingIssues}");
+        foreach (var issue in diagnostics.Issues)
+        {
+            var message = $"Source analysis issue ({label}) [{issue.Severity}] {issue.Field}/{issue.Code}: {issue.Message} Value={issue.Value}";
+            if (issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+            {
+                logger.Warning(message);
+            }
+            else
+            {
+                logger.Info(message);
             }
         }
     }

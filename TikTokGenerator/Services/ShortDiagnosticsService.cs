@@ -26,7 +26,7 @@ internal static class ShortDiagnosticsService
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex NumberRegex = new(
-        "\\b\\d+(?:[,.]\\d+)?\\s*(?:%|procent|proc\\.|sekund|minut|godzin)?",
+        "\\b\\d+(?:[,.]\\d+)?\\s*(?:%|procent|proc\\.|sekund|sek|s|minut|min|godzin|godz)?",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static void LogSummary(
@@ -492,7 +492,8 @@ internal static class ShortDiagnosticsService
             builder.Append(char.IsLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : ' ');
         }
 
-        return Regex.Replace(builder.ToString(), "\\s+", " ", RegexOptions.CultureInvariant).Trim();
+        var normalizedText = Regex.Replace(builder.ToString(), "\\s+", " ", RegexOptions.CultureInvariant).Trim();
+        return NormalizeNumberWords(normalizedText);
     }
 
     private static bool HasActionVerb(string value)
@@ -521,6 +522,56 @@ internal static class ShortDiagnosticsService
                 yield return evidence;
             }
         }
+    }
+
+    private static string NormalizeNumberWords(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = Regex.Replace(
+            value,
+            "\\b(jeden|jedna|jedno)\\b",
+            "1",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(
+            normalized,
+            "\\b(dwa|dwie)\\b",
+            "2",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(
+            normalized,
+            "\\b(trzy)\\b",
+            "3",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(
+            normalized,
+            "\\b(cztery)\\b",
+            "4",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(
+            normalized,
+            "\\b(piec|pięc)\\b",
+            "5",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(
+            normalized,
+            "\\b(minuta|minuty|minut)\\b",
+            "min",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(
+            normalized,
+            "\\b(sekunda|sekundy|sekund)\\b",
+            "sek",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(
+            normalized,
+            "\\b(godzina|godziny|godzin)\\b",
+            "godz",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return normalized;
     }
 
     private static IEnumerable<string> FindUnsupportedClaimPhrases(string value, string sourceText)

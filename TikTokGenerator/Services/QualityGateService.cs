@@ -16,15 +16,16 @@ public static class QualityGateService
         var scriptDiagnostics = ShortDiagnosticsService.CreateScriptDiagnostics(topic, script);
         var voiceDiagnostics = ShortDiagnosticsService.CreateVoiceDiagnostics(topic, script, voiceSegments);
         var clipDiagnostics = ShortDiagnosticsService.CreateClipDiagnostics(topic, script, voiceSegments, clips);
+        var sourceDiagnostics = SourceAnalysisDiagnosticsService.CreateDiagnostics(topic, analysis);
 
         var report = new QualityGateReport();
 
         AddCriterion(
             report,
             "Zgodnosc wszystkich twierdzen ze zrodlem",
-            ScoreSourceAlignment(scriptDiagnostics, review),
+            ScoreSourceAlignment(scriptDiagnostics, sourceDiagnostics, review, topic, script),
             25,
-            scriptDiagnostics.Summary.HasUnsupportedClaims || review.HasCriticalErrors
+            scriptDiagnostics.Summary.HasUnsupportedClaims || sourceDiagnostics.HasBlockingIssues || review.HasCriticalErrors
                 ? "Sa niepotwierdzone twierdzenia albo krytyczne uwagi recenzenta."
                 : "Nie wykryto niepotwierdzonych liczb ani mocnych obietnic.");
 
@@ -65,7 +66,7 @@ public static class QualityGateService
         AddCriterion(
             report,
             "Dopasowanie wizualne",
-            ScoreVisuals(visualPlan, clipDiagnostics),
+            ScoreVisuals(topic, script, visualPlan, clipDiagnostics),
             10,
             clipDiagnostics.Summary.ErrorCount > 0
                 ? "Sa bledy w klipach albo brakujace segmenty."
@@ -80,16 +81,24 @@ public static class QualityGateService
 
         report.Score = report.Criteria.Sum(criterion => criterion.Points);
 
-        AddBlockingIssues(report, topic, analysis, script, review, visualPlan, scriptDiagnostics, voiceDiagnostics, clipDiagnostics);
+        AddBlockingIssues(report, topic, analysis, script, review, visualPlan, scriptDiagnostics, sourceDiagnostics, voiceDiagnostics, clipDiagnostics);
         report.Passed = report.Score >= report.MinimumScore
             && report.Issues.All(issue => !issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase));
 
         return report;
     }
 
-    private static int ScoreSourceAlignment(ShortDiagnosticsReport scriptDiagnostics, ContentReview review)
+    private static int ScoreSourceAlignment(
+        ShortDiagnosticsReport scriptDiagnostics,
+        SourceAnalysisDiagnostics sourceDiagnostics,
+        ContentReview review,
+        SelectedTopic topic,
+        ShortScript script)
     {
-        if (scriptDiagnostics.Summary.HasUnsupportedClaims || review.HasCriticalErrors)
+        if (scriptDiagnostics.Summary.HasUnsupportedClaims
+            || sourceDiagnostics.HasBlockingIssues
+            || review.HasCriticalErrors
+            || HasUnsupportedPayoff(topic, script))
         {
             return 0;
         }
@@ -129,7 +138,11 @@ public static class QualityGateService
         return hookWords.Overlaps(endingWords) ? 10 : 7;
     }
 
-    private static int ScoreVisuals(VisualPlan visualPlan, ShortDiagnosticsReport clipDiagnostics)
+    private static int ScoreVisuals(
+        SelectedTopic topic,
+        ShortScript script,
+        VisualPlan visualPlan,
+        ShortDiagnosticsReport clipDiagnostics)
     {
         if (clipDiagnostics.Summary.ErrorCount > 0)
         {
@@ -153,6 +166,11 @@ public static class QualityGateService
         if (weakVisual)
         {
             score -= 2;
+        }
+
+        if (HasRepeatedIrrelevantVisualPlan(topic, script, visualPlan))
+        {
+            score -= 6;
         }
 
         return Math.Clamp(score, 0, 10);
@@ -182,12 +200,28 @@ public static class QualityGateService
         ContentReview review,
         VisualPlan visualPlan,
         ShortDiagnosticsReport scriptDiagnostics,
+        SourceAnalysisDiagnostics sourceDiagnostics,
         ShortDiagnosticsReport voiceDiagnostics,
         ShortDiagnosticsReport clipDiagnostics)
     {
+        if (sourceDiagnostics.HasBlockingIssues)
+        {
+            AddIssue(report, "error", "source_analysis_unsupported", "Analiza zrodla zawiera informacje, ktorych nie ma w materiale zrodlowym.");
+        }
+
         if (scriptDiagnostics.Summary.HasUnsupportedClaims)
         {
             AddIssue(report, "error", "unsupported_claims", "Bramka zatrzymala render: scenariusz ma niepotwierdzone twierdzenia.");
+        }
+
+        if (HasTopicBriefDrift(topic, script))
+        {
+            AddIssue(report, "error", "topic_brief_drift", "Brief albo domyslny cel zdominowal temat: scenariusz obiecuje cos, czego nie ma w zrodle ani tytule.");
+        }
+
+        if (HasUnsupportedPayoff(topic, script))
+        {
+            AddIssue(report, "error", "unsupported_payoff", "Payoff lub zakonczenie zawiera konkretny wynik/przyklad, ktorego nie ma w materiale zrodlowym.");
         }
 
         if (review.HasCriticalErrors || !review.Approved)
@@ -228,6 +262,250 @@ public static class QualityGateService
         {
             AddIssue(report, "error", "clip_errors", "Brakuje klipow albo selekcja wideo ma bledy krytyczne.");
         }
+
+        if (HasRepeatedIrrelevantVisualPlan(topic, script, visualPlan))
+        {
+            AddIssue(report, "error", "repeated_visual_plan", "Plan wizualny powtarza ten sam niezwiazany obiekt zamiast pokazywac rozne kroki.");
+        }
+    }
+
+    private static bool HasUnsupportedPayoff(SelectedTopic topic, ShortScript script)
+    {
+        var payoffTexts = script.Scenes
+            .Where(scene => scene.Role.Equals("payoff", StringComparison.OrdinalIgnoreCase))
+            .Select(scene => $"{scene.VoiceOver} {scene.NewInformation}")
+            .Append(script.Ending)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToList();
+
+        if (payoffTexts.Count == 0)
+        {
+            return false;
+        }
+
+        var normalizedSource = SourceAnalysisDiagnosticsService.Normalize(topic.SourceText);
+        foreach (var text in payoffTexts)
+        {
+            if (SourceAnalysisDiagnosticsService.IsSupported(normalizedSource, text))
+            {
+                continue;
+            }
+
+            var terms = SourceAnalysisDiagnosticsService.ExtractTerms(SourceAnalysisDiagnosticsService.Normalize(text)).ToList();
+            var sourceTerms = SourceAnalysisDiagnosticsService.ExtractTerms(normalizedSource).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var unsupportedTerms = terms
+                .Where(term => !sourceTerms.Contains(term))
+                .Where(term => !IsGenericPayoffTerm(term))
+                .ToList();
+
+            if (unsupportedTerms.Count > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasTopicBriefDrift(SelectedTopic topic, ShortScript script)
+    {
+        var sourceAndTitle = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText}");
+        var scriptText = SourceAnalysisDiagnosticsService.Normalize($"{script.Title} {script.Hook} {script.Ending} {string.Join(" ", script.Scenes.Select(scene => scene.VoiceOver))}");
+        var briefText = SourceAnalysisDiagnosticsService.Normalize($"{topic.Brief.ViewerProblem} {topic.Brief.DesiredOutcome}");
+        var sourceTerms = SourceAnalysisDiagnosticsService.ExtractTerms(sourceAndTitle).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var briefTerms = SourceAnalysisDiagnosticsService.ExtractTerms(briefText)
+            .Where(term => !sourceTerms.Contains(term))
+            .ToList();
+
+        if (briefTerms.Count == 0)
+        {
+            return false;
+        }
+
+        var scriptTerms = SourceAnalysisDiagnosticsService.ExtractTerms(scriptText).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var driftingBriefTerms = briefTerms.Count(scriptTerms.Contains);
+        if (driftingBriefTerms == 0)
+        {
+            return false;
+        }
+
+        var sourceOverlap = scriptTerms.Count(sourceTerms.Contains) / (double)Math.Max(scriptTerms.Count, 1);
+        return sourceOverlap < 0.2;
+    }
+
+    private static bool HasRepeatedIrrelevantVisualPlan(
+        SelectedTopic topic,
+        ShortScript script,
+        VisualPlan visualPlan)
+    {
+        var scenePlans = visualPlan.Segments
+            .Where(segment => segment.SegmentName.StartsWith("scene_", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (scenePlans.Count < 2)
+        {
+            return false;
+        }
+
+        var sourceTerms = SourceAnalysisDiagnosticsService
+            .ExtractTerms(SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText}"))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var repeatedVisualGroups = scenePlans
+            .Select(segment => new
+            {
+                Segment = segment,
+                Key = BuildVisualKey(segment)
+            })
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+            .GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() >= Math.Max(2, (int)Math.Ceiling(scenePlans.Count * 0.5)))
+            .ToList();
+
+        foreach (var group in repeatedVisualGroups)
+        {
+            var keyTerms = SourceAnalysisDiagnosticsService.ExtractTerms(group.Key).ToList();
+            if (keyTerms.Count == 0 || keyTerms.Any(sourceTerms.Contains))
+            {
+                continue;
+            }
+
+            var relatedToAnyScene = group.Any(item =>
+            {
+                var index = ParseSceneIndex(item.Segment.SegmentName);
+                var scene = script.Scenes.ElementAtOrDefault(index);
+                if (scene is null)
+                {
+                    return false;
+                }
+
+                var sceneTerms = SourceAnalysisDiagnosticsService
+                    .ExtractTerms(SourceAnalysisDiagnosticsService.Normalize($"{scene.VoiceOver} {scene.NewInformation}"))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                return keyTerms.Any(sceneTerms.Contains);
+            });
+
+            if (!relatedToAnyScene && IsLikelyGenericBrollKey(group.Key))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsGenericPayoffTerm(string term)
+    {
+        return term is
+            "masz" or
+            "mamy" or
+            "zrob" or
+            "zrobisz" or
+            "zacznij" or
+            "dzis" or
+            "dzisiaj" or
+            "prosty" or
+            "gotowy" or
+            "plan" or
+            "startowy" or
+            "wynik" or
+            "efekt" or
+            "rezultat" or
+            "koniec";
+    }
+
+    private static string BuildVisualKey(VisualPlanSegment segment)
+    {
+        var candidates = new[]
+        {
+            segment.PrimaryObject,
+            segment.VisibleContent,
+            segment.ResultToShow,
+            segment.PersonAction,
+            string.Join(" ", segment.SearchPhrases)
+        };
+
+        foreach (var candidate in candidates)
+        {
+            var terms = SourceAnalysisDiagnosticsService
+                .ExtractTerms(SourceAnalysisDiagnosticsService.Normalize(candidate))
+                .Select(CanonicalizeVisualTerm)
+                .Where(term => !IsGenericVisualTerm(term))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(3)
+                .ToList();
+
+            if (terms.Count > 0)
+            {
+                return string.Join(" ", terms);
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static int ParseSceneIndex(string segmentName)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(
+            segmentName,
+            @"scene_(\d+)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        return match.Success && int.TryParse(match.Groups[1].Value, out var index)
+            ? index - 1
+            : -1;
+    }
+
+    private static string CanonicalizeVisualTerm(string term)
+    {
+        return term switch
+        {
+            "budzik" or "alarmowy" => "alarm",
+            "telefon" or "smartfon" => "phone",
+            "komputer" => "computer",
+            "notatnik" or "notes" => "notebook",
+            "biurko" => "desk",
+            _ => term
+        };
+    }
+
+    private static bool IsGenericVisualTerm(string term)
+    {
+        return term is
+            "person" or
+            "osoba" or
+            "people" or
+            "close" or
+            "shot" or
+            "ujecie" or
+            "kadr" or
+            "morning" or
+            "rano" or
+            "visible" or
+            "widoczny" or
+            "result" or
+            "rezultat" or
+            "pokazuje" or
+            "wykonuje";
+    }
+
+    private static bool IsLikelyGenericBrollKey(string key)
+    {
+        var terms = SourceAnalysisDiagnosticsService
+            .ExtractTerms(SourceAnalysisDiagnosticsService.Normalize(key))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return terms.Overlaps(
+        [
+            "alarm",
+            "clock",
+            "coffee",
+            "laptop",
+            "keyboard",
+            "phone",
+            "smartphone",
+            "office",
+            "desk",
+            "screen",
+            "computer"
+        ]);
     }
 
     private static bool HasRepeatedNewInformation(ShortScript script)
