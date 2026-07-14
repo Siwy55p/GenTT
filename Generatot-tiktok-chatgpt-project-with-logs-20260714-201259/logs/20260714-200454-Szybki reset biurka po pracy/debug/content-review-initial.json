@@ -1,0 +1,62 @@
+{
+  "issues": [
+    {
+      "severity": "warning",
+      "segment": "hook",
+      "code": "hookDoesNotMatchSource",
+      "message": "Hook \u0027Zamknij dzien w 25 sekund\u0027 nie zgodnie z analiz\u0105 \u017Ar\u00F3d\u0142a. Analiza \u017Ar\u00F3d\u0142a m\u00F3wi, \u017Ce szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny. Hook jest zbyt og\u00F3lny i nie konkretny dla odbiorcy (osoby pracujace przy biurku). [Zdegradowano: hook i payoff sa powiazane ze zrodlem oraz krokami scenariusza.]",
+      "suggestedFix": "Zmien hook na \u0027Zamknij dzien w 25 sekund: 3 kroki dla biurka po pracy\u0027 aby by\u0142 bardziej konkretny dla odbiorcy i zgodny z analiz\u0105 \u017Ar\u00F3d\u0142a."
+    },
+    {
+      "severity": "info",
+      "segment": "scene_01",
+      "code": "noNewInformation",
+      "message": "Scena 01 nie wnosi nowej informacji. W analizie \u017Ar\u00F3d\u0142a, krok \u0027wyrzuc smieci\u0027 jest ju\u017C opisany w kroku S1, ale scena 01 przedstawia problem bez konkretnego kroku rozwi\u0105zania. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usunie\u0107 scen\u0119 01, poniewa\u017C nie jest to konkretny krok z analizy \u017Ar\u00F3d\u0142a. Wprowad\u017A bezpo\u015Brednio krok \u0027wyrzuc smieci\u0027 jako pierwszy krok w scenie 02."
+    },
+    {
+      "severity": "info",
+      "segment": "scene_02",
+      "code": "noNewInformation",
+      "message": "Scena 02 nie wnosi nowej informacji. W analizie \u017Ar\u00F3d\u0142a, krok \u0027odloz rzeczy na miejsce\u0027 jest ju\u017C opisany w kroku S2, ale scena 02 przedstawia krok bez konkretnego mechanizmu rozwi\u0105zania. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usunie\u0107 scen\u0119 02, poniewa\u017C nie jest to konkretny krok z analizy \u017Ar\u00F3d\u0142a. Wprowad\u017A bezpo\u015Brednio krok \u0027odloz rzeczy na miejsce\u0027 jako drugi krok w scenie 03."
+    },
+    {
+      "severity": "info",
+      "segment": "scene_03",
+      "code": "noNewInformation",
+      "message": "Scena 03 nie wnosi nowej informacji. W analizie \u017Ar\u00F3d\u0142a, krok \u0027zostaw jedna kartke z pierwszym zadaniem na jutro\u0027 jest ju\u017C opisany w kroku S3, ale scena 03 przedstawia krok bez konkretnego mechanizmu rozwi\u0105zania. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usunie\u0107 scen\u0119 03, poniewa\u017C nie jest to konkretny krok z analizy \u017Ar\u00F3d\u0142a. Wprowad\u017A bezpo\u015Brednio krok \u0027zostaw jedna kartke z pierwszym zadaniem na jutro\u0027 jako trzeci krok w scenie 04."
+    },
+    {
+      "severity": "info",
+      "segment": "scene_04",
+      "code": "noNewInformation",
+      "message": "Scena 04 nie wnosi nowej informacji. W analizie \u017Ar\u00F3d\u0142a, krok \u0027zostaw biurko gotowe na kolejny start\u0027 jest ju\u017C opisany w kroku F1, ale scena 04 przedstawia rezultat bez konkretnego mechanizmu rozwi\u0105zania. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usunie\u0107 scen\u0119 04, poniewa\u017C nie jest to konkretny krok z analizy \u017Ar\u00F3d\u0142a. Wprowad\u017A bezpo\u015Brednio rezultat \u0027biurko gotowe na kolejny start\u0027 jako ostatni krok w scenie 05."
+    },
+    {
+      "severity": "info",
+      "segment": "scene_05",
+      "code": "noNewInformation",
+      "message": "Scena 05 nie wnosi nowej informacji. W analizie \u017Ar\u00F3d\u0142a, krok \u0027zostaw biurko gotowe na kolejny start\u0027 jest ju\u017C opisany w kroku F1, ale scena 05 przedstawia rezultat bez konkretnego mechanizmu rozwi\u0105zania. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usunie\u0107 scen\u0119 05, poniewa\u017C nie jest to konkretny krok z analizy \u017Ar\u00F3d\u0142a. Wprowad\u017A bezpo\u015Brednio rezultat \u0027biurko gotowe na kolejny start\u0027 jako ostatni krok w scenie 06."
+    }
+  ],
+  "repetitionCheck": "Brak powt\u00F3rze\u0144 semantycznych w scenariuszu.",
+  "obviousAdviceCheck": "Brak oczywistych porad bez warto\u015Bci w scenariuszu.",
+  "sourceComparison": "Scenariusz jest zgodny z analiz\u0105 \u017Ar\u00F3d\u0142a, ale nie uwzgl\u0119dnia konkretnych krok\u00F3w z analizy \u017Ar\u00F3d\u0142a.",
+  "promiseCheck": "Payoff nie spe\u0142nia obietnicy hooka. Hook m\u00F3wi \u0027Zamknij dzien w 25 sekund\u0027, ale payoff m\u00F3wi \u0027Zostawienie biurka gotowego na kolejny start w 25 sekund\u0027.",
+  "feasibilityCheck": "Kroki s\u0105 wykonalne dla odbiorcy (osoby pracujace przy biurku).",
+  "audienceValueCheck": "Warto\u015B\u0107 dla odbiorcy jest wysoka, poniewa\u017C scenariusz pomaga zresetowa\u0107 biurko po pracy.",
+  "suggestedFixes": [
+    "Zmien hook na \u0027Zamknij dzien w 25 sekund: 3 kroki dla biurka po pracy\u0027 aby by\u0142 bardziej konkretny dla odbiorcy i zgodny z analiz\u0105 \u017Ar\u00F3d\u0142a.",
+    "Usunie\u0107 scen\u0119 01, poniewa\u017C nie jest to konkretny krok z analizy \u017Ar\u00F3d\u0142a. Wprowad\u017A bezpo\u015Brednio krok \u0027wyrzuc smieci\u0027 jako pierwszy krok w scenie 02.",
+    "Usunie\u0107 scen\u0119 02, poniewa\u017C nie jest to konkretny krok z analizy \u017Ar\u00F3d\u0142a. Wprowad\u017A bezpo\u015Brednio krok \u0027odloz rzeczy na miejsce\u0027 jako drugi krok w scenie 03.",
+    "Usunie\u0107 scen\u0119 03, poniewa\u017C nie jest to konkretny krok z analizy \u017Ar\u00F3d\u0142a. Wprowad\u017A bezpo\u015Brednio krok \u0027zostaw jedna kartke z pierwszym zadaniem na jutro\u0027 jako trzeci krok w scenie 04.",
+    "Usunie\u0107 scen\u0119 04, poniewa\u017C nie jest to konkretny krok z analizy \u017Ar\u00F3d\u0142a. Wprowad\u017A bezpo\u015Brednio rezultat \u0027biurko gotowe na kolejny start\u0027 jako ostatni krok w scenie 05."
+  ],
+  "usefulnessScore": 7,
+  "approved": true,
+  "hasCriticalErrors": false
+}

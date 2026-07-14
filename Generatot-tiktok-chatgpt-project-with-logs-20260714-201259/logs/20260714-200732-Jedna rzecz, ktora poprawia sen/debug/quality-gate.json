@@ -1,0 +1,50 @@
+{
+  "score": 87,
+  "minimumScore": 80,
+  "passed": true,
+  "criteria": [
+    {
+      "name": "Zgodnosc wszystkich twierdzen ze zrodlem",
+      "points": 25,
+      "maxPoints": 25,
+      "reason": "Nie wykryto niepotwierdzonych liczb ani mocnych obietnic."
+    },
+    {
+      "name": "Uzytecznosc dla wskazanego odbiorcy",
+      "points": 14,
+      "maxPoints": 20,
+      "reason": "Warto\u015B\u0107 dla odbiorcy jest niska, poniewa\u017C brakuje konkretnych przyk\u0142ad\u00F3w jak wykona\u0107 kroki."
+    },
+    {
+      "name": "Konkretnosc i wykonalnosc",
+      "points": 10,
+      "maxPoints": 15,
+      "reason": "2/3 scen ma czasownik akcji."
+    },
+    {
+      "name": "Brak powtorzen i logiczna progresja",
+      "points": 10,
+      "maxPoints": 10,
+      "reason": "Sceny maja odroznialne newInformation."
+    },
+    {
+      "name": "Hook zgodny z payoffem",
+      "points": 10,
+      "maxPoints": 10,
+      "reason": "Payoff \u0027Wybierz jedna czynnosc bez ekranu, odloz telefon poza zasieg reki i przygotuj jedna rzecz na rano\u0027 nie spenia obietnicy hooka, poniewa\u017C hook sugeruje \u0027wybierz je\u0027 bez wyja\u015Bnienia co to jest."
+    },
+    {
+      "name": "Dopasowanie wizualne",
+      "points": 8,
+      "maxPoints": 10,
+      "reason": "Plan wizualny i klipy pokrywaja segmenty."
+    },
+    {
+      "name": "Czytelnosc i czas",
+      "points": 10,
+      "maxPoints": 10,
+      "reason": "Zmierzony czas audio: 19,065s / 25s."
+    }
+  ],
+  "issues": []
+}

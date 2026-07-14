@@ -121,6 +121,39 @@ public sealed class ShortDiagnosticsServiceTests
         Assert.Contains(report.Issues, issue => issue.Code == "duplicate_clip_url");
     }
 
+    [Fact]
+    public void CreateScriptDiagnostics_WhenAiNotesStepsUseSourceActionVerbs_CountsEverySceneAsPractical()
+    {
+        var topic = new SelectedTopic
+        {
+            Title = "Aplikacja AI, ktora robi notatki z nagran",
+            SourceUrl = "offline://test",
+            SourceText = """
+            Praktyczna teza: aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania, ale wynik trzeba sprawdzic.
+            Konkretne kroki: wgraj jedno nagranie lub transkrypcje, popros o liste decyzji i zadan, porownaj wynik z najwazniejszym fragmentem nagrania.
+            """
+        };
+        var script = new ShortScript
+        {
+            Title = topic.Title,
+            Hook = "Gubisz decyzje po nagraniu lub spotkaniu?",
+            HookOnScreenText = "Gubisz decyzje",
+            Ending = "Sprawdz decyzje z jednego nagrania.",
+            EndingOnScreenText = "Sprawdz decyzje",
+            Scenes =
+            [
+                CreateScene("Wgraj jedno nagranie lub transkrypcje."),
+                CreateScene("Popros o liste decyzji i zadan."),
+                CreateScene("Porownaj wynik z najwazniejszym fragmentem nagrania.")
+            ]
+        };
+
+        var report = ShortDiagnosticsService.CreateScriptDiagnostics(topic, script);
+
+        Assert.Equal(3, report.Summary.PracticalSegmentCount);
+        Assert.DoesNotContain(report.Issues, issue => issue.Code == "missing_action_verb");
+    }
+
     private static SelectedTopic CreateTopic()
     {
         return new SelectedTopic
@@ -153,6 +186,21 @@ public sealed class ShortDiagnosticsServiceTests
                     SceneGoal = "Pokazac praktyczny krok."
                 }
             ]
+        };
+    }
+
+    private static ScriptScene CreateScene(string voiceOver)
+    {
+        return new ScriptScene
+        {
+            Role = "action",
+            VoiceOver = voiceOver,
+            SourceFactIds = ["F1"],
+            NewInformation = voiceOver,
+            OnScreenText = voiceOver.TrimEnd('.'),
+            VisualDescription = "Osoba wykonuje krok ze zrodla.",
+            SearchPhrase = "person reviewing meeting transcript on laptop",
+            SceneGoal = "Pokazac praktyczny krok."
         };
     }
 

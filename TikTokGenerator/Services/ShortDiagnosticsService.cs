@@ -18,7 +18,7 @@ internal static class ShortDiagnosticsService
     };
 
     private static readonly Regex ActionVerbRegex = new(
-        "\\b(otworz|usun|wlacz|wylacz|sprawdz|zapisz|wybierz|skanuj|przejdz|zablokuj|dopisz|skresl|zostaw|uporzadkuj|wez|kliknij|zacznij|wyrzuc|odloz|posprzataj)\\b",
+        "\\b(otworz|usun|wlacz|wylacz|sprawdz|zapisz|wybierz|skanuj|przejdz|zablokuj|dopisz|skresl|zostaw|uporzadkuj|wez|kliknij|zacznij|wyrzuc|odloz|posprzataj|wgraj|popros|porownaj|przygotuj|wypisz|okresl|oznacz|ustaw|przetestuj|zamien|pokaz|nazwij|zmien|obejdz)\\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex StoryboardRegex = new(
@@ -55,12 +55,13 @@ internal static class ShortDiagnosticsService
     {
         var sourceKeywords = ExtractKeywords(topic.SourceText);
         var sourceKeywordSet = sourceKeywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var sourceActionVerbs = ExtractSourceActionVerbs(topic.SourceText);
         var segmentInputs = CreateScriptSegmentInputs(script);
         var report = CreateBaseReport("script", topic, script, sourceKeywords, segmentInputs);
 
         foreach (var input in segmentInputs)
         {
-            var diagnostics = BuildSegmentDiagnostics(input, sourceKeywordSet);
+            var diagnostics = BuildSegmentDiagnostics(input, sourceKeywordSet, sourceActionVerbs);
             report.Segments.Add(diagnostics);
             AddScriptSegmentIssues(report, topic, diagnostics);
         }
@@ -92,11 +93,12 @@ internal static class ShortDiagnosticsService
     {
         var sourceKeywords = ExtractKeywords(topic.SourceText);
         var sourceKeywordSet = sourceKeywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var sourceActionVerbs = ExtractSourceActionVerbs(topic.SourceText);
         var report = CreateBaseReport("voice", topic, script, sourceKeywords, CreateVoiceSegmentInputs(voiceSegments));
 
         foreach (var input in CreateVoiceSegmentInputs(voiceSegments))
         {
-            var diagnostics = BuildSegmentDiagnostics(input, sourceKeywordSet);
+            var diagnostics = BuildSegmentDiagnostics(input, sourceKeywordSet, sourceActionVerbs);
             report.Segments.Add(diagnostics);
             AddVoiceSegmentIssues(report, diagnostics, input.AudioPath);
         }
@@ -126,13 +128,14 @@ internal static class ShortDiagnosticsService
     {
         var sourceKeywords = ExtractKeywords(topic.SourceText);
         var sourceKeywordSet = sourceKeywords.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var sourceActionVerbs = ExtractSourceActionVerbs(topic.SourceText);
         var report = CreateBaseReport("clips", topic, script, sourceKeywords, CreateVoiceSegmentInputs(voiceSegments));
         var clipBySegment = clips.ToDictionary(clip => clip.SegmentIndex);
         var usedUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var input in CreateVoiceSegmentInputs(voiceSegments))
         {
-            var diagnostics = BuildSegmentDiagnostics(input, sourceKeywordSet);
+            var diagnostics = BuildSegmentDiagnostics(input, sourceKeywordSet, sourceActionVerbs);
             if (clipBySegment.TryGetValue(input.Index, out var clip))
             {
                 diagnostics.ClipUrl = clip.PexelsUrl;
@@ -317,7 +320,8 @@ internal static class ShortDiagnosticsService
 
     private static SegmentDiagnostics BuildSegmentDiagnostics(
         SegmentInput input,
-        HashSet<string> sourceKeywordSet)
+        HashSet<string> sourceKeywordSet,
+        HashSet<string> sourceActionVerbs)
     {
         var textForKeywords = $"{input.VoiceOver} {input.OnScreenText} {input.VisualDescription} {input.SearchPhrase}";
         var generatedKeywords = ExtractKeywords(textForKeywords);
@@ -345,7 +349,7 @@ internal static class ShortDiagnosticsService
             OnScreenTextLength = input.OnScreenText.Length,
             DurationSeconds = durationSeconds,
             WordsPerMinute = durationSeconds <= 0 ? 0 : wordCount / durationSeconds * 60,
-            HasActionVerb = HasActionVerb(input.VoiceOver),
+            HasActionVerb = HasActionVerb(input.VoiceOver, sourceActionVerbs),
             HasStoryboardLanguage = HasStoryboardLanguage(input.VoiceOver) || HasStoryboardLanguage(input.OnScreenText),
             HasUnsupportedNumber = false,
             HasGenericVisualDescription = IsGenericVisualDescription(input.VisualDescription),
@@ -370,7 +374,7 @@ internal static class ShortDiagnosticsService
 
         if (IsSceneSegment(segment) && !segment.HasActionVerb)
         {
-            AddIssue(report, "info", "script", segment.Name, "missing_action_verb", "Scena nie ma wyraznego czasownika akcji.", segment.VoiceOver, "Dodaj praktyczny krok: otworz, zapisz, sprawdz, usun, wlacz albo wybierz.");
+            AddIssue(report, "info", "script", segment.Name, "missing_action_verb", "Scena nie ma wyraznego czasownika akcji.", segment.VoiceOver, "Dodaj praktyczny krok z czasownikiem akcji albo uzyj czasownika z pola Konkretne kroki w materiale zrodlowym.");
         }
 
         if (IsSceneSegment(segment) && segment.SourceKeywordHits.Count == 0)
@@ -497,9 +501,63 @@ internal static class ShortDiagnosticsService
         return NormalizeNumberWords(normalizedText);
     }
 
-    private static bool HasActionVerb(string value)
+    private static bool HasActionVerb(string value, HashSet<string> sourceActionVerbs)
     {
-        return ActionVerbRegex.IsMatch(NormalizeForSearch(value));
+        var normalized = NormalizeForSearch(value);
+        if (ActionVerbRegex.IsMatch(normalized))
+        {
+            return true;
+        }
+
+        var firstWord = normalized
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+        return !string.IsNullOrWhiteSpace(firstWord) && sourceActionVerbs.Contains(firstWord);
+    }
+
+    private static HashSet<string> ExtractSourceActionVerbs(string sourceText)
+    {
+        var verbs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var line in sourceText.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var normalizedLine = NormalizeForSearch(line);
+            if (!normalizedLine.Contains("konkretne kroki", StringComparison.OrdinalIgnoreCase)
+                && !normalizedLine.StartsWith("kroki ", StringComparison.OrdinalIgnoreCase)
+                && !Regex.IsMatch(normalizedLine, "\\bkrok\\s*\\d+\\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            {
+                continue;
+            }
+
+            var sourcePart = line;
+            var colonIndex = line.IndexOf(':', StringComparison.Ordinal);
+            if (colonIndex >= 0 && colonIndex + 1 < line.Length)
+            {
+                sourcePart = line[(colonIndex + 1)..];
+            }
+
+            foreach (var fragment in Regex.Split(sourcePart, "[,.;]|\\boraz\\b|\\ba potem\\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            {
+                var verb = ExtractFirstActionWord(fragment);
+                if (!string.IsNullOrWhiteSpace(verb))
+                {
+                    verbs.Add(verb);
+                }
+            }
+        }
+
+        return verbs;
+    }
+
+    private static string ExtractFirstActionWord(string value)
+    {
+        var skip = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "konkretne", "kroki", "krok", "step", "potem", "nastepnie", "oraz", "zeby", "aby", "i"
+        };
+        return NormalizeForSearch(value)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault(word => word.Length >= 3 && !skip.Contains(word) && !StopWords.Contains(word))
+            ?? string.Empty;
     }
 
     private static bool HasStoryboardLanguage(string value)

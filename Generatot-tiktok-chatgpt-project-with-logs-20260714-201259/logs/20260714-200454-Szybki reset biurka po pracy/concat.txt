@@ -1,0 +1,5 @@
+file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200454-Szybki reset biurka po pracy/segments/00_hook.mp4'
+file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200454-Szybki reset biurka po pracy/segments/01_scene_01.mp4'
+file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200454-Szybki reset biurka po pracy/segments/02_scene_02.mp4'
+file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200454-Szybki reset biurka po pracy/segments/03_scene_03.mp4'
+file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200454-Szybki reset biurka po pracy/segments/04_ending.mp4'

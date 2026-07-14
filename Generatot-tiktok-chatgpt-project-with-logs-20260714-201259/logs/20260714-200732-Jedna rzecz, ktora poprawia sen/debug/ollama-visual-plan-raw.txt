@@ -1,0 +1,80 @@
+{
+  "globalAvoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+  "segments": [
+    {
+      "segmentName": "hook",
+      "visibleContent": "Spokojniejszy wieczor latwiej zaczac od",
+      "personAction": "Osoba patrzy na ekran komputera z niepewna expresja",
+      "primaryObject": "Ekran komputera",
+      "shotType": "Close-up",
+      "movementStart": "Początek ruchu: Ekran komputera z niepewna expresja",
+      "movementEnd": "Koniec ruchu: Ekran komputera z niepewna expresja",
+      "resultToShow": "Wizualizacja chaosu po rozpoczeciu dnia",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "close up smartphone productivity app",
+        "calm evening routine bedroom notebook"
+      ]
+    },
+    {
+      "segmentName": "scene_01",
+      "visibleContent": "Wybierz jedna czynnosc bez ekranu",
+      "personAction": "Osoba wybiera jedno zadanie z listy na papierku",
+      "primaryObject": "Papier",
+      "shotType": "Medium shot",
+      "movementStart": "Początek ruchu: Osoba trzyma papier w ręce",
+      "movementEnd": "Koniec ruchu: Osoba wybiera jedno zadanie z listy na papierku",
+      "resultToShow": "Krok ze zrodla: wybierz jedna czynnosc bez ekranu",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "calm evening routine bedroom notebook",
+        "close up smartphone productivity app"
+      ]
+    },
+    {
+      "segmentName": "scene_02",
+      "visibleContent": "Odloz telefon poza zasieg reki",
+      "personAction": "Osoba odloz telefon na stolik poza zasieg reki",
+      "primaryObject": "Telefon",
+      "shotType": "Close-up",
+      "movementStart": "Początek ruchu: Osoba trzyma telefon w ręce",
+      "movementEnd": "Koniec ruchu: Telefon poza zasieg reki na stoliku",
+      "resultToShow": "Krok ze zrodla: odloz telefon poza zasieg reki",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "close up smartphone productivity app"
+      ]
+    },
+    {
+      "segmentName": "scene_03",
+      "visibleContent": "Przygotuj jedna rzecz na rano",
+      "personAction": "Osoba przygotowuje jedno przedmiot na rano na stole",
+      "primaryObject": "Stolik",
+      "shotType": "Medium shot",
+      "movementStart": "Początek ruchu: Osoba trzyma przedmiot w ręce",
+      "movementEnd": "Koniec ruchu: Przedmiot na stole",
+      "resultToShow": "Krok ze zrodla: przygotuj jedna rzecz na rano",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "calm evening routine bedroom notebook",
+        "close up smartphone productivity app"
+      ]
+    },
+    {
+      "segmentName": "ending",
+      "visibleContent": "Wybierz jedna czynnosc bez ekranu, odloz",
+      "personAction": "Osoba wykonuje trzy kroki zrodla w kolejnosci",
+      "primaryObject": "Papier, telefon, stolik",
+      "shotType": "Medium shot",
+      "movementStart": "Początek ruchu: Osoba trzyma papier w ręce",
+      "movementEnd": "Koniec ruchu: Osoba wykonuje trzy kroki zrodla w kolejnosci",
+      "resultToShow": "Wybierz jedna czynnosc bez ekranu, odloz telefon poza zasieg reki i przygotuj jedna rzecz na rano",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "calm evening routine bedroom notebook",
+        "close up smartphone productivity app"
+      ]
+    }
+  ]
+}

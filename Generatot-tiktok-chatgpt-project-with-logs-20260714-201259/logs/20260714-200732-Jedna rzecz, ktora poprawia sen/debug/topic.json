@@ -1,0 +1,14 @@
+{
+  "title": "Jedna rzecz, ktora poprawia sen",
+  "sourceText": "Temat roboczy: Jedna rzecz, ktora poprawia sen\nKategoria: Lifestyle\nPraktyczna teza: spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia.\nKonkretne kroki: wybierz jedna czynnosc bez ekranu, odloz telefon poza zasieg reki, przygotuj jedna rzecz na rano.\nKorzysc dla widza: widz ma prosty wieczorny krok zamiast dlugiej rutyny.\nOgraniczenia: nie skladaj obietnic medycznych ani gwarancji lepszego snu.\nNie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.",
+  "sourceUrl": "offline://mvp-seed",
+  "brief": {
+    "audience": "osoby pracujace przy komputerze",
+    "knowledgeLevel": "poczatkujacy",
+    "viewerProblem": "chaos po rozpoczeciu dnia",
+    "desiredOutcome": "wybrac pierwszy priorytet",
+    "contentType": "praktyczny tutorial",
+    "tone": "konkretny, bez coachingu",
+    "durationSeconds": 25
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Szybki reset biurka po pracy",
+  "sourceText": "Temat roboczy: Szybki reset biurka po pracy\nKategoria: Lifestyle\nPraktyczna teza: szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny.\nKonkretne kroki: wyrzuc smieci, odloz rzeczy na miejsce, zostaw jedna kartke z pierwszym zadaniem na jutro.\nKorzysc dla widza: porzadek na starcie kolejnej sesji pracy.\nNie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.",
+  "sourceUrl": "offline://mvp-seed",
+  "brief": {
+    "audience": "osoby pracujace przy biurku",
+    "knowledgeLevel": "poczatkujacy",
+    "viewerProblem": "balagan po zakonczonej pracy",
+    "desiredOutcome": "zostawic biurko gotowe na kolejny start",
+    "contentType": "praktyczny tutorial",
+    "tone": "konkretny, bez coachingu",
+    "durationSeconds": 25
+  }
+}

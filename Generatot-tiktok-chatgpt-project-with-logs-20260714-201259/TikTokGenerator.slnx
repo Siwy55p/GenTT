@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="TikTokGenerator.Tests/TikTokGenerator.Tests.csproj" />
+  <Project Path="TikTokGenerator/TikTokGenerator.csproj" />
+</Solution>

@@ -1,0 +1,69 @@
+{
+  "title": "Szybki reset biurka po pracy",
+  "selectedConceptId": "D1",
+  "hook": "Jak szybko zresetowac biurko po pracy?",
+  "hookOnScreenText": "Jak szybko zresetowac biurko po pracy",
+  "hookSearchPhrase": "person planning task in notebook at desk",
+  "scenes": [
+    {
+      "role": "action",
+      "voiceOver": "Wyrzuc smieci.",
+      "sourceFactIds": [
+        "F1"
+      ],
+      "newInformation": "Krok ze zrodla: wyrzuc smieci.",
+      "onScreenEmphasis": "Wyrzuc smieci",
+      "estimatedWords": 2,
+      "onScreenText": "Wyrzuc smieci",
+      "visualDescription": "Wyrzuc smieci Osoba wyrzuca smieci z biurka na kosz Kosz na biurku Medium shot Ruch do przodu (wyrzucanie smieci) Ruch do ty\u0142u (zamkni\u0119cie kosza) Usuni\u0119cie niepotrzebnych przedmiot\u00F3w z biurka",
+      "searchPhrase": "person organizing desk after work",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "person throwing trash from desk"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "sceneGoal": "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+    },
+    {
+      "role": "action",
+      "voiceOver": "Odloz rzeczy na miejsce.",
+      "sourceFactIds": [
+        "F1"
+      ],
+      "newInformation": "Krok ze zrodla: odloz rzeczy na miejsce.",
+      "onScreenEmphasis": "Odloz rzeczy na miejsce",
+      "estimatedWords": 4,
+      "onScreenText": "Odloz rzeczy na miejsce",
+      "visualDescription": "Odloz rzeczy na miejsce Osoba umieszcza przedmioty na odpowiednie miejsca w biurku Biurko Medium shot Ruch do przodu (umieszczenie przedmiot\u00F3w) Ruch do ty\u0142u (zamkni\u0119cie biurka) Organizacja biurka po usuni\u0119ciu smieci",
+      "searchPhrase": "person organizing desk after work",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "desk organization after work"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "sceneGoal": "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+    },
+    {
+      "role": "action",
+      "voiceOver": "Zostaw jedna kartke z pierwszym zadaniem na jutro.",
+      "sourceFactIds": [
+        "F1"
+      ],
+      "newInformation": "Krok ze zrodla: zostaw jedna kartke z pierwszym zadaniem na jutro.",
+      "onScreenEmphasis": "Zostaw jedna kartke z pierwszym zadaniem",
+      "estimatedWords": 8,
+      "onScreenText": "Zostaw jedna kartke z pierwszym zadaniem",
+      "visualDescription": "Zostaw jedna kartke z pierwszym zadaniem na jutro Osoba pisze jedno zadanie na kartce i umieszcza j\u0105 na biurku Kartka z zadaniem Close-up Ruch do przodu (pisanie na kartce) Ruch do ty\u0142u (umieszczenie kartki na biurku) Zdefiniowanie pierwszego zadania na jutro",
+      "searchPhrase": "person writing task on paper at desk",
+      "searchPhrases": [
+        "person writing task on paper at desk",
+        "desk planning for tomorrow"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "sceneGoal": "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+    }
+  ],
+  "ending": "Wyrzuc smieci, odloz rzeczy na miejsce i zostaw jedna kartke z pierwszym zadaniem na jutro.",
+  "endingOnScreenText": "Wyrzuc smieci, odloz rzeczy na miejsce i",
+  "endingSearchPhrase": "person planning task in notebook at desk"
+}

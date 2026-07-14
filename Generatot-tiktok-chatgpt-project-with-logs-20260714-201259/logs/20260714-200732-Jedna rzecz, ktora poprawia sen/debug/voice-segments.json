@@ -1,0 +1,94 @@
+[
+  {
+    "index": 0,
+    "name": "hook",
+    "role": "problem",
+    "text": "Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia d: wybierz je.?",
+    "sourceFactIds": [],
+    "newInformation": "Ustawia problem i obietnice filmu.",
+    "onScreenText": "Spokojniejszy wieczor latwiej zaczac od",
+    "visualDescription": "Hook otwierajacy short: kadr ma natychmiast pokazac problem lub praktyczny kontekst.",
+    "searchPhrase": "close up smartphone productivity app",
+    "searchPhrases": [
+      "close up smartphone productivity app"
+    ],
+    "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+    "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200732-Jedna rzecz, ktora poprawia sen\\audio\\00_hook.wav",
+    "duration": "00:00:05.6102489"
+  },
+  {
+    "index": 1,
+    "name": "scene_01",
+    "role": "action",
+    "text": "Wybierz jedna czynnosc bez ekranu.",
+    "sourceFactIds": [
+      "F2"
+    ],
+    "newInformation": "Krok ze zrodla: jedna czynnosc bez ekranu.",
+    "onScreenText": "Wybierz jedna czynnosc bez ekranu",
+    "visualDescription": "Osoba wykonuje krok ze zrodla: Wybierz jedna czynnosc bez ekranu.",
+    "searchPhrase": "calm evening routine bedroom notebook",
+    "searchPhrases": [
+      "calm evening routine bedroom notebook"
+    ],
+    "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+    "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200732-Jedna rzecz, ktora poprawia sen\\audio\\01_scene_01.wav",
+    "duration": "00:00:02.4058959"
+  },
+  {
+    "index": 2,
+    "name": "scene_02",
+    "role": "action",
+    "text": "Odloz telefon poza zasieg reki.",
+    "sourceFactIds": [
+      "F3"
+    ],
+    "newInformation": "Krok ze zrodla: odloz telefon poza zasieg reki.",
+    "onScreenText": "Odloz telefon poza zasieg reki",
+    "visualDescription": "Osoba wykonuje krok ze zrodla: Odloz telefon poza zasieg reki.",
+    "searchPhrase": "person organizing desk after work",
+    "searchPhrases": [
+      "person organizing desk after work",
+      "close up smartphone productivity app"
+    ],
+    "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+    "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200732-Jedna rzecz, ktora poprawia sen\\audio\\02_scene_02.wav",
+    "duration": "00:00:02.4175060"
+  },
+  {
+    "index": 3,
+    "name": "scene_03",
+    "role": "action",
+    "text": "Przygotuj jedna rzecz na rano.",
+    "sourceFactIds": [
+      "F4"
+    ],
+    "newInformation": "Krok ze zrodla: przygotuj jedna rzecz na rano.",
+    "onScreenText": "Przygotuj jedna rzecz na rano",
+    "visualDescription": "Osoba wykonuje krok ze zrodla: Przygotuj jedna rzecz na rano.",
+    "searchPhrase": "calm evening routine bedroom notebook",
+    "searchPhrases": [
+      "calm evening routine bedroom notebook"
+    ],
+    "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+    "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200732-Jedna rzecz, ktora poprawia sen\\audio\\03_scene_03.wav",
+    "duration": "00:00:02.1388660"
+  },
+  {
+    "index": 4,
+    "name": "ending",
+    "role": "cta",
+    "text": "Wybierz jedna czynnosc bez ekranu, odloz telefon poza zasieg reki i przygotuj jedna rzecz na rano.",
+    "sourceFactIds": [],
+    "newInformation": "Domyka obietnice filmu i daje jedno zadanie.",
+    "onScreenText": "Wybierz jedna czynnosc bez ekranu, odloz",
+    "visualDescription": "Zakonczenie shorta: kadr powinien domykac praktyczna obietnice.",
+    "searchPhrase": "calm evening routine bedroom notebook",
+    "searchPhrases": [
+      "calm evening routine bedroom notebook"
+    ],
+    "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+    "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200732-Jedna rzecz, ktora poprawia sen\\audio\\04_ending.wav",
+    "duration": "00:00:06.4926080"
+  }
+]

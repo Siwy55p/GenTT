@@ -1,0 +1,45 @@
+{
+  "issues": [
+    {
+      "severity": "warning",
+      "segment": "hook",
+      "code": "hookDoesNotMatch",
+      "message": "Hook \u0027Jak szybko zresetowac biurko po pracy?\u0027 nie pasuje do oczekiwanych krokow (wyrzuc smieci, odloz rzeczy na miejsce, zostaw jedna kartke z pierwszym zadaniem na jutro). Hook powinien dotyczy zresetowania biurka po pracy, ale nie jest konkretny o co chodzi. [Zdegradowano: hook i payoff sa powiazane ze zrodlem oraz krokami scenariusza.]",
+      "suggestedFix": "Zmien hook na \u0027Jak zresetowac biurko po pracy w 3 krokach?\u0027 aby bylo jasne, ze to jest szybki reset w 3 krokach."
+    },
+    {
+      "severity": "info",
+      "segment": "scenes",
+      "code": "noNewInformation",
+      "message": "Scena 01: \u0027Wyrzuc smieci\u0027 nie wnosi nowej informacji, bo jest to krok z analizy zrodla i nie jest to nowy element w stosunku do poprzednich scen. Wszystkie kroki sa juz w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usun scena 01, bo nie ma nowej informacji. Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek."
+    },
+    {
+      "severity": "info",
+      "segment": "scenes",
+      "code": "noNewInformation",
+      "message": "Scena 02: \u0027Odloz rzeczy na miejsce\u0027 nie wnosi nowej informacji, bo jest to krok z analizy zrodla i nie jest to nowy element w stosunku do poprzednich scen. Wszystkie kroki sa juz w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usun scena 02, bo nie ma nowej informacji. Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek."
+    },
+    {
+      "severity": "info",
+      "segment": "scenes",
+      "code": "noNewInformation",
+      "message": "Scena 03: \u0027Zostaw jedna kartke z pierwszym zadaniem na jutro\u0027 nie wnosi nowej informacji, bo jest to krok z analizy zrodla i nie jest to nowy element w stosunku do poprzednich scen. Wszystkie kroki sa juz w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usun scena 03, bo nie ma nowej informacji. Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek."
+    }
+  ],
+  "repetitionCheck": "Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek. Sceny 01, 02, 03 nie wnios\u0142y nowej informacji, bo sa to kroki z analizy zrodla.",
+  "obviousAdviceCheck": "Brak oczywistych porad bez wartosci, bo wszystkie kroki sa z analizy zrodla i nie sa niepotrzebnymi.",
+  "sourceComparison": "Zgodne z faktami zrodla, bo wszystkie kroki sa z analizy zrodla.",
+  "promiseCheck": "Hook nie spelnia obietnicy, bo hook m\u00F3wi \u0027jak szybko zresetowac biurko po pracy?\u0027 a w filmie jest 3 kroki, ale nie jest to konkretny szybki reset.",
+  "feasibilityCheck": "Kroki sa wykonalne, bo wyrzuc smieci, odloz rzeczy na miejsce, zostaw kartke to oczywiste kroki.",
+  "audienceValueCheck": "Wartosc dla odbiorcy: Osoby pracujace przy biurku potrzebuj\u0105 szybkiego resetu biurka po pracy, ale film nie daje konkretnego sposobu jak to zrobi\u0107 w 3 krokach.",
+  "suggestedFixes": [
+    "Zmien hook na \u0027Jak zresetowac biurko po pracy w 3 krokach?\u0027 aby bylo jasne, ze to jest szybki reset w 3 krokach.",
+    "Usun wszystkie sceny, bo nie ma nowej informacji. Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek."
+  ],
+  "usefulnessScore": 7,
+  "approved": true,
+  "hasCriticalErrors": false
+}

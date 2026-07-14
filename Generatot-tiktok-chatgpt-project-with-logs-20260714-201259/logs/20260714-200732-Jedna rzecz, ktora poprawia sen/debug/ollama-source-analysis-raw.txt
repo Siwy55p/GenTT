@@ -1,0 +1,54 @@
+{
+  "mainThesis": "spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia d: wybierz jedna czynnosc bez ekranu, odloz telefon poza zasieg reki, przygotuj jedna rzecz na rano",
+  "facts": [
+    {
+      "id": "F1",
+      "text": "spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia",
+      "evidence": "praktyczna teza"
+    },
+    {
+      "id": "F2",
+      "text": "wybierz jedna czynnosc bez ekranu",
+      "evidence": "konkretne kroki"
+    },
+    {
+      "id": "F3",
+      "text": "odloz telefon poza zasieg reki",
+      "evidence": "konkretne kroki"
+    },
+    {
+      "id": "F4",
+      "text": "przygotuj jedna rzecz na rano",
+      "evidence": "konkretne kroki"
+    }
+  ],
+  "steps": [
+    {
+      "id": "S1",
+      "text": "wybierz jedna czynnosc bez ekranu",
+      "sourceFactIds": [
+        "F2"
+      ]
+    },
+    {
+      "id": "S2",
+      "text": "odloz telefon poza zasieg reki",
+      "sourceFactIds": [
+        "F3"
+      ]
+    },
+    {
+      "id": "S3",
+      "text": "przygotuj jedna rzecz na rano",
+      "sourceFactIds": [
+        "F4"
+      ]
+    }
+  ],
+  "examples": [],
+  "limitations": [
+    "nie skladaj obietnic medycznych ani gwarancji lepszego snu"
+  ],
+  "riskyClaims": [],
+  "mostUsefulFragment": "spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia"
+  }

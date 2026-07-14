@@ -1,0 +1,976 @@
+{
+  "topic": {
+    "title": "Szybki reset biurka po pracy",
+    "sourceText": "Temat roboczy: Szybki reset biurka po pracy\nKategoria: Lifestyle\nPraktyczna teza: szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny.\nKonkretne kroki: wyrzuc smieci, odloz rzeczy na miejsce, zostaw jedna kartke z pierwszym zadaniem na jutro.\nKorzysc dla widza: porzadek na starcie kolejnej sesji pracy.\nNie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.",
+    "sourceUrl": "offline://mvp-seed",
+    "brief": {
+      "audience": "osoby pracujace przy biurku",
+      "knowledgeLevel": "poczatkujacy",
+      "viewerProblem": "balagan po zakonczonej pracy",
+      "desiredOutcome": "zostawic biurko gotowe na kolejny start",
+      "contentType": "praktyczny tutorial",
+      "tone": "konkretny, bez coachingu",
+      "durationSeconds": 25
+    }
+  },
+  "sourceAnalysis": {
+    "mainThesis": "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny",
+    "facts": [
+      {
+        "id": "F1",
+        "text": "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny",
+        "evidence": "Praktyczna teza"
+      }
+    ],
+    "steps": [
+      {
+        "id": "S1",
+        "text": "wyrzuc smieci",
+        "sourceFactIds": [
+          "F1"
+        ]
+      },
+      {
+        "id": "S2",
+        "text": "odloz rzeczy na miejsce",
+        "sourceFactIds": [
+          "F1"
+        ]
+      },
+      {
+        "id": "S3",
+        "text": "zostaw jedna kartke z pierwszym zadaniem na jutro",
+        "sourceFactIds": [
+          "F1"
+        ]
+      }
+    ],
+    "examples": [],
+    "limitations": [],
+    "riskyClaims": [],
+    "mostUsefulFragment": "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny"
+  },
+  "conceptSelection": {
+    "directions": [
+      {
+        "id": "D1",
+        "name": "Szybki reset biurka: 3 kroki w 25 sekund",
+        "structure": "trzyetapowy tutorial",
+        "hookAngle": "Przyk\u0142adowy balagan po pracy",
+        "payoff": "Zostawienie biurka gotowego na kolejny start w 25 sekund",
+        "scores": {
+          "usefulness": 9,
+          "specificity": 8,
+          "freshness": 7,
+          "sourceAlignment": 10,
+          "visualPotential": 8,
+          "hookStrength": 9
+        },
+        "totalScore": 51
+      },
+      {
+        "id": "D2",
+        "name": "10 sekund na reset biurka: Jak szybko zacz\u0105\u0107 nowy dzie\u0144",
+        "structure": "blad -\u003E poprawka",
+        "hookAngle": "Za du\u017Co czasu na reset biurka?",
+        "payoff": "Zostawienie biurka gotowego na kolejny start w 10 sekund",
+        "scores": {
+          "usefulness": 8,
+          "specificity": 7,
+          "freshness": 8,
+          "sourceAlignment": 9,
+          "visualPotential": 7,
+          "hookStrength": 8
+        },
+        "totalScore": 47
+      },
+      {
+        "id": "D3",
+        "name": "Biurko po pracy: 3 rzeczy, kt\u00F3re zawsze nale\u017Cy zrobic",
+        "structure": "przed -\u003E po",
+        "hookAngle": "Co zrobic po pracy, aby biurko by\u0142o gotowe?",
+        "payoff": "Zostawienie biurka gotowego na kolejny start w 3 krokach",
+        "scores": {
+          "usefulness": 7,
+          "specificity": 9,
+          "freshness": 6,
+          "sourceAlignment": 8,
+          "visualPotential": 9,
+          "hookStrength": 7
+        },
+        "totalScore": 46
+      }
+    ],
+    "selectedDirectionId": "D1",
+    "selectedReason": "Najlepsza kombinacja u\u017Cyteczno\u015Bci, specyfiki i zgodno\u015Bci z \u017Ar\u00F3d\u0142em. Kierunek D1 jest najbardziej konkretny, zgodny z danymi i ma wysoki potencja\u0142 wizualny.",
+    "selectedDirection": {
+      "id": "D1",
+      "name": "Szybki reset biurka: 3 kroki w 25 sekund",
+      "structure": "trzyetapowy tutorial",
+      "hookAngle": "Przyk\u0142adowy balagan po pracy",
+      "payoff": "Zostawienie biurka gotowego na kolejny start w 25 sekund",
+      "scores": {
+        "usefulness": 9,
+        "specificity": 8,
+        "freshness": 7,
+        "sourceAlignment": 10,
+        "visualPotential": 8,
+        "hookStrength": 9
+      },
+      "totalScore": 51
+    }
+  },
+  "script": {
+    "title": "Szybki reset biurka po pracy",
+    "selectedConceptId": "D1",
+    "hook": "Jak szybko zresetowac biurko po pracy?",
+    "hookOnScreenText": "Jak szybko zresetowac biurko po pracy",
+    "hookSearchPhrase": "person planning task in notebook at desk",
+    "scenes": [
+      {
+        "role": "action",
+        "voiceOver": "Wyrzuc smieci.",
+        "sourceFactIds": [
+          "F1"
+        ],
+        "newInformation": "Krok ze zrodla: wyrzuc smieci.",
+        "onScreenEmphasis": "Wyrzuc smieci",
+        "estimatedWords": 2,
+        "onScreenText": "Wyrzuc smieci",
+        "visualDescription": "Wyrzuc smieci Osoba wyrzuca smieci z biurka na kosz Kosz na biurku Medium shot Ruch do przodu (wyrzucanie smieci) Ruch do ty\u0142u (zamkni\u0119cie kosza) Usuni\u0119cie niepotrzebnych przedmiot\u00F3w z biurka",
+        "searchPhrase": "person organizing desk after work",
+        "searchPhrases": [
+          "person organizing desk after work",
+          "person throwing trash from desk"
+        ],
+        "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+        "sceneGoal": "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+      },
+      {
+        "role": "action",
+        "voiceOver": "Odloz rzeczy na miejsce.",
+        "sourceFactIds": [
+          "F1"
+        ],
+        "newInformation": "Krok ze zrodla: odloz rzeczy na miejsce.",
+        "onScreenEmphasis": "Odloz rzeczy na miejsce",
+        "estimatedWords": 4,
+        "onScreenText": "Odloz rzeczy na miejsce",
+        "visualDescription": "Odloz rzeczy na miejsce Osoba umieszcza przedmioty na odpowiednie miejsca w biurku Biurko Medium shot Ruch do przodu (umieszczenie przedmiot\u00F3w) Ruch do ty\u0142u (zamkni\u0119cie biurka) Organizacja biurka po usuni\u0119ciu smieci",
+        "searchPhrase": "person organizing desk after work",
+        "searchPhrases": [
+          "person organizing desk after work",
+          "desk organization after work"
+        ],
+        "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+        "sceneGoal": "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+      },
+      {
+        "role": "action",
+        "voiceOver": "Zostaw jedna kartke z pierwszym zadaniem na jutro.",
+        "sourceFactIds": [
+          "F1"
+        ],
+        "newInformation": "Krok ze zrodla: zostaw jedna kartke z pierwszym zadaniem na jutro.",
+        "onScreenEmphasis": "Zostaw jedna kartke z pierwszym zadaniem",
+        "estimatedWords": 8,
+        "onScreenText": "Zostaw jedna kartke z pierwszym zadaniem",
+        "visualDescription": "Zostaw jedna kartke z pierwszym zadaniem na jutro Osoba pisze jedno zadanie na kartce i umieszcza j\u0105 na biurku Kartka z zadaniem Close-up Ruch do przodu (pisanie na kartce) Ruch do ty\u0142u (umieszczenie kartki na biurku) Zdefiniowanie pierwszego zadania na jutro",
+        "searchPhrase": "person writing task on paper at desk",
+        "searchPhrases": [
+          "person writing task on paper at desk",
+          "desk planning for tomorrow"
+        ],
+        "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+        "sceneGoal": "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+      }
+    ],
+    "ending": "Wyrzuc smieci, odloz rzeczy na miejsce i zostaw jedna kartke z pierwszym zadaniem na jutro.",
+    "endingOnScreenText": "Wyrzuc smieci, odloz rzeczy na miejsce i",
+    "endingSearchPhrase": "person planning task in notebook at desk"
+  },
+  "contentReview": {
+    "issues": [
+      {
+        "severity": "warning",
+        "segment": "hook",
+        "code": "hookDoesNotMatch",
+        "message": "Hook \u0027Jak szybko zresetowac biurko po pracy?\u0027 nie pasuje do oczekiwanych krokow (wyrzuc smieci, odloz rzeczy na miejsce, zostaw jedna kartke z pierwszym zadaniem na jutro). Hook powinien dotyczy zresetowania biurka po pracy, ale nie jest konkretny o co chodzi. [Zdegradowano: hook i payoff sa powiazane ze zrodlem oraz krokami scenariusza.]",
+        "suggestedFix": "Zmien hook na \u0027Jak zresetowac biurko po pracy w 3 krokach?\u0027 aby bylo jasne, ze to jest szybki reset w 3 krokach."
+      },
+      {
+        "severity": "info",
+        "segment": "scenes",
+        "code": "noNewInformation",
+        "message": "Scena 01: \u0027Wyrzuc smieci\u0027 nie wnosi nowej informacji, bo jest to krok z analizy zrodla i nie jest to nowy element w stosunku do poprzednich scen. Wszystkie kroki sa juz w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+        "suggestedFix": "Usun scena 01, bo nie ma nowej informacji. Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek."
+      },
+      {
+        "severity": "info",
+        "segment": "scenes",
+        "code": "noNewInformation",
+        "message": "Scena 02: \u0027Odloz rzeczy na miejsce\u0027 nie wnosi nowej informacji, bo jest to krok z analizy zrodla i nie jest to nowy element w stosunku do poprzednich scen. Wszystkie kroki sa juz w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+        "suggestedFix": "Usun scena 02, bo nie ma nowej informacji. Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek."
+      },
+      {
+        "severity": "info",
+        "segment": "scenes",
+        "code": "noNewInformation",
+        "message": "Scena 03: \u0027Zostaw jedna kartke z pierwszym zadaniem na jutro\u0027 nie wnosi nowej informacji, bo jest to krok z analizy zrodla i nie jest to nowy element w stosunku do poprzednich scen. Wszystkie kroki sa juz w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+        "suggestedFix": "Usun scena 03, bo nie ma nowej informacji. Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek."
+      }
+    ],
+    "repetitionCheck": "Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek. Sceny 01, 02, 03 nie wnios\u0142y nowej informacji, bo sa to kroki z analizy zrodla.",
+    "obviousAdviceCheck": "Brak oczywistych porad bez wartosci, bo wszystkie kroki sa z analizy zrodla i nie sa niepotrzebnymi.",
+    "sourceComparison": "Zgodne z faktami zrodla, bo wszystkie kroki sa z analizy zrodla.",
+    "promiseCheck": "Hook nie spelnia obietnicy, bo hook m\u00F3wi \u0027jak szybko zresetowac biurko po pracy?\u0027 a w filmie jest 3 kroki, ale nie jest to konkretny szybki reset.",
+    "feasibilityCheck": "Kroki sa wykonalne, bo wyrzuc smieci, odloz rzeczy na miejsce, zostaw kartke to oczywiste kroki.",
+    "audienceValueCheck": "Wartosc dla odbiorcy: Osoby pracujace przy biurku potrzebuj\u0105 szybkiego resetu biurka po pracy, ale film nie daje konkretnego sposobu jak to zrobi\u0107 w 3 krokach.",
+    "suggestedFixes": [
+      "Zmien hook na \u0027Jak zresetowac biurko po pracy w 3 krokach?\u0027 aby bylo jasne, ze to jest szybki reset w 3 krokach.",
+      "Usun wszystkie sceny, bo nie ma nowej informacji. Wszystkie kroki sa juz w analizie zrodla i nie powinno byc powt\u00F3rek."
+    ],
+    "usefulnessScore": 7,
+    "approved": true,
+    "hasCriticalErrors": false
+  },
+  "visualPlan": {
+    "segments": [
+      {
+        "segmentName": "hook",
+        "visibleContent": "Jak szybko zresetowac biurko po pracy?",
+        "personAction": "Osoba patrzy na kamera z pytaniem o szybki reset biurka po pracy",
+        "primaryObject": "Kamera",
+        "shotType": "Close-up",
+        "movementStart": "Sta\u0142y",
+        "movementEnd": "Sta\u0142y",
+        "resultToShow": "Wizualizacja problemu balagana po pracy",
+        "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+        "searchPhrases": [
+          "person planning task in notebook at desk",
+          "desk clutter after work"
+        ]
+      },
+      {
+        "segmentName": "scene_01",
+        "visibleContent": "Wyrzuc smieci",
+        "personAction": "Osoba wyrzuca smieci z biurka na kosz",
+        "primaryObject": "Kosz na biurku",
+        "shotType": "Medium shot",
+        "movementStart": "Ruch do przodu (wyrzucanie smieci)",
+        "movementEnd": "Ruch do ty\u0142u (zamkni\u0119cie kosza)",
+        "resultToShow": "Usuni\u0119cie niepotrzebnych przedmiot\u00F3w z biurka",
+        "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+        "searchPhrases": [
+          "person organizing desk after work",
+          "person throwing trash from desk"
+        ]
+      },
+      {
+        "segmentName": "scene_02",
+        "visibleContent": "Odloz rzeczy na miejsce",
+        "personAction": "Osoba umieszcza przedmioty na odpowiednie miejsca w biurku",
+        "primaryObject": "Biurko",
+        "shotType": "Medium shot",
+        "movementStart": "Ruch do przodu (umieszczenie przedmiot\u00F3w)",
+        "movementEnd": "Ruch do ty\u0142u (zamkni\u0119cie biurka)",
+        "resultToShow": "Organizacja biurka po usuni\u0119ciu smieci",
+        "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+        "searchPhrases": [
+          "person organizing desk after work",
+          "desk organization after work"
+        ]
+      },
+      {
+        "segmentName": "scene_03",
+        "visibleContent": "Zostaw jedna kartke z pierwszym zadaniem na jutro",
+        "personAction": "Osoba pisze jedno zadanie na kartce i umieszcza j\u0105 na biurku",
+        "primaryObject": "Kartka z zadaniem",
+        "shotType": "Close-up",
+        "movementStart": "Ruch do przodu (pisanie na kartce)",
+        "movementEnd": "Ruch do ty\u0142u (umieszczenie kartki na biurku)",
+        "resultToShow": "Zdefiniowanie pierwszego zadania na jutro",
+        "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+        "searchPhrases": [
+          "person writing task on paper at desk",
+          "desk planning for tomorrow"
+        ]
+      },
+      {
+        "segmentName": "ending",
+        "visibleContent": "Wyrzuc smieci, odloz rzeczy na miejsce i",
+        "personAction": "Osoba zako\u0144czy\u0142a wszystkie kroki i patrzy na kamer\u0119 z u\u015Bmiechem",
+        "primaryObject": "Biurko z organizowanymi przedmiotami",
+        "shotType": "Medium shot",
+        "movementStart": "Sta\u0142y",
+        "movementEnd": "Sta\u0142y",
+        "resultToShow": "Biurko gotowe na kolejny start",
+        "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+        "searchPhrases": [
+          "person planning task in notebook at desk",
+          "desk ready for next day"
+        ]
+      }
+    ],
+    "globalAvoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll"
+  },
+  "qualityGate": {
+    "score": 89,
+    "minimumScore": 80,
+    "passed": true,
+    "criteria": [
+      {
+        "name": "Zgodnosc wszystkich twierdzen ze zrodlem",
+        "points": 25,
+        "maxPoints": 25,
+        "reason": "Nie wykryto niepotwierdzonych liczb ani mocnych obietnic."
+      },
+      {
+        "name": "Uzytecznosc dla wskazanego odbiorcy",
+        "points": 14,
+        "maxPoints": 20,
+        "reason": "Wartosc dla odbiorcy: Osoby pracujace przy biurku potrzebuj\u0105 szybkiego resetu biurka po pracy, ale film nie daje konkretnego sposobu jak to zrobi\u0107 w 3 krokach."
+      },
+      {
+        "name": "Konkretnosc i wykonalnosc",
+        "points": 15,
+        "maxPoints": 15,
+        "reason": "3/3 scen ma czasownik akcji."
+      },
+      {
+        "name": "Brak powtorzen i logiczna progresja",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "Sceny maja odroznialne newInformation."
+      },
+      {
+        "name": "Hook zgodny z payoffem",
+        "points": 7,
+        "maxPoints": 10,
+        "reason": "Hook nie spelnia obietnicy, bo hook m\u00F3wi \u0027jak szybko zresetowac biurko po pracy?\u0027 a w filmie jest 3 kroki, ale nie jest to konkretny szybki reset."
+      },
+      {
+        "name": "Dopasowanie wizualne",
+        "points": 8,
+        "maxPoints": 10,
+        "reason": "Plan wizualny i klipy pokrywaja segmenty."
+      },
+      {
+        "name": "Czytelnosc i czas",
+        "points": 10,
+        "maxPoints": 10,
+        "reason": "Zmierzony czas audio: 16,116s / 25s."
+      }
+    ],
+    "issues": []
+  },
+  "voiceSegments": [
+    {
+      "index": 0,
+      "name": "hook",
+      "role": "problem",
+      "text": "Jak szybko zresetowac biurko po pracy?",
+      "sourceFactIds": [],
+      "newInformation": "Ustawia problem i obietnice filmu.",
+      "onScreenText": "Jak szybko zresetowac biurko po pracy",
+      "visualDescription": "Hook otwierajacy short: kadr ma natychmiast pokazac problem lub praktyczny kontekst.",
+      "searchPhrase": "person planning task in notebook at desk",
+      "searchPhrases": [
+        "person planning task in notebook at desk"
+      ],
+      "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+      "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\audio\\00_hook.wav",
+      "duration": "00:00:02.7774150"
+    },
+    {
+      "index": 1,
+      "name": "scene_01",
+      "role": "action",
+      "text": "Wyrzuc smieci.",
+      "sourceFactIds": [
+        "F1"
+      ],
+      "newInformation": "Krok ze zrodla: wyrzuc smieci.",
+      "onScreenText": "Wyrzuc smieci",
+      "visualDescription": "Wyrzuc smieci Osoba wyrzuca smieci z biurka na kosz Kosz na biurku Medium shot Ruch do przodu (wyrzucanie smieci) Ruch do ty\u0142u (zamkni\u0119cie kosza) Usuni\u0119cie niepotrzebnych przedmiot\u00F3w z biurka",
+      "searchPhrase": "person organizing desk after work",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "person throwing trash from desk"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\audio\\01_scene_01.wav",
+      "duration": "00:00:01.3609980"
+    },
+    {
+      "index": 2,
+      "name": "scene_02",
+      "role": "action",
+      "text": "Odloz rzeczy na miejsce.",
+      "sourceFactIds": [
+        "F1"
+      ],
+      "newInformation": "Krok ze zrodla: odloz rzeczy na miejsce.",
+      "onScreenText": "Odloz rzeczy na miejsce",
+      "visualDescription": "Odloz rzeczy na miejsce Osoba umieszcza przedmioty na odpowiednie miejsca w biurku Biurko Medium shot Ruch do przodu (umieszczenie przedmiot\u00F3w) Ruch do ty\u0142u (zamkni\u0119cie biurka) Organizacja biurka po usuni\u0119ciu smieci",
+      "searchPhrase": "person organizing desk after work",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "desk organization after work"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\audio\\02_scene_02.wav",
+      "duration": "00:00:02.0343760"
+    },
+    {
+      "index": 3,
+      "name": "scene_03",
+      "role": "action",
+      "text": "Zostaw jedna kartke z pierwszym zadaniem na jutro.",
+      "sourceFactIds": [
+        "F1"
+      ],
+      "newInformation": "Krok ze zrodla: zostaw jedna kartke z pierwszym zadaniem na jutro.",
+      "onScreenText": "Zostaw jedna kartke z pierwszym zadaniem",
+      "visualDescription": "Zostaw jedna kartke z pierwszym zadaniem na jutro Osoba pisze jedno zadanie na kartce i umieszcza j\u0105 na biurku Kartka z zadaniem Close-up Ruch do przodu (pisanie na kartce) Ruch do ty\u0142u (umieszczenie kartki na biurku) Zdefiniowanie pierwszego zadania na jutro",
+      "searchPhrase": "person writing task on paper at desk",
+      "searchPhrases": [
+        "person writing task on paper at desk",
+        "desk planning for tomorrow"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\audio\\03_scene_03.wav",
+      "duration": "00:00:03.4159640"
+    },
+    {
+      "index": 4,
+      "name": "ending",
+      "role": "cta",
+      "text": "Wyrzuc smieci, odloz rzeczy na miejsce i zostaw jedna kartke z pierwszym zadaniem na jutro.",
+      "sourceFactIds": [],
+      "newInformation": "Domyka obietnice filmu i daje jedno zadanie.",
+      "onScreenText": "Wyrzuc smieci, odloz rzeczy na miejsce i",
+      "visualDescription": "Zakonczenie shorta: kadr powinien domykac praktyczna obietnice.",
+      "searchPhrase": "person planning task in notebook at desk",
+      "searchPhrases": [
+        "person planning task in notebook at desk"
+      ],
+      "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+      "audioPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\audio\\04_ending.wav",
+      "duration": "00:00:06.5274380"
+    }
+  ],
+  "clips": [
+    {
+      "segmentIndex": 0,
+      "searchPhrase": "person planning task in notebook at desk",
+      "searchPhrases": [
+        "person planning task in notebook at desk"
+      ],
+      "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+      "visualDescription": "Hook otwierajacy short: kadr ma natychmiast pokazac problem lub praktyczny kontekst.",
+      "filePath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\videos\\00_person_planning_task_in_notebook_at_desk.mp4",
+      "pexelsUrl": "https://www.pexels.com/video/efficient-desk-organization-with-checklist-33194181/",
+      "thumbnailUrl": "https://images.pexels.com/videos/33194181/business-check-checklist-desk-33194181.jpeg?auto=compress\u0026cs=tinysrgb\u0026fit=crop\u0026h=1200\u0026w=630",
+      "pexelsRank": 1,
+      "candidateCount": 12,
+      "contentScore": 114,
+      "selectionReason": "Selected best scored candidate across multiple queries. query=\u0022person planning task in notebook at desk\u0022 score=114 avoidPenalty=0.",
+      "authorName": "Jakub Zerdzicki",
+      "authorUrl": "https://www.pexels.com/@jakubzerdzicki"
+    },
+    {
+      "segmentIndex": 1,
+      "searchPhrase": "person organizing desk after work",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "person throwing trash from desk"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "visualDescription": "Wyrzuc smieci Osoba wyrzuca smieci z biurka na kosz Kosz na biurku Medium shot Ruch do przodu (wyrzucanie smieci) Ruch do ty\u0142u (zamkni\u0119cie kosza) Usuni\u0119cie niepotrzebnych przedmiot\u00F3w z biurka",
+      "filePath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\videos\\01_person_organizing_desk_after_work.mp4",
+      "pexelsUrl": "https://www.pexels.com/video/a-woman-checking-the-documents-8298301/",
+      "thumbnailUrl": "https://images.pexels.com/videos/8298301/pexels-photo-8298301.jpeg?auto=compress\u0026cs=tinysrgb\u0026fit=crop\u0026h=1200\u0026w=630",
+      "pexelsRank": 2,
+      "candidateCount": 24,
+      "contentScore": 111,
+      "selectionReason": "Selected best scored candidate across multiple queries. query=\u0022person organizing desk after work\u0022 score=111 avoidPenalty=0.",
+      "authorName": "Mikhail Nilov",
+      "authorUrl": "https://www.pexels.com/@mikhail-nilov"
+    },
+    {
+      "segmentIndex": 2,
+      "searchPhrase": "person organizing desk after work",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "desk organization after work"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "visualDescription": "Odloz rzeczy na miejsce Osoba umieszcza przedmioty na odpowiednie miejsca w biurku Biurko Medium shot Ruch do przodu (umieszczenie przedmiot\u00F3w) Ruch do ty\u0142u (zamkni\u0119cie biurka) Organizacja biurka po usuni\u0119ciu smieci",
+      "filePath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\videos\\02_person_organizing_desk_after_work.mp4",
+      "pexelsUrl": "https://www.pexels.com/video/a-person-putting-away-a-smartwatch-and-its-charger-10567194/",
+      "thumbnailUrl": "https://images.pexels.com/videos/10567194/at-home-clean-up-copy-space-diversity-10567194.jpeg?auto=compress\u0026cs=tinysrgb\u0026fit=crop\u0026h=1200\u0026w=630",
+      "pexelsRank": 3,
+      "candidateCount": 24,
+      "contentScore": 108,
+      "selectionReason": "Selected best scored candidate across multiple queries. query=\u0022person organizing desk after work\u0022 score=108 avoidPenalty=0.",
+      "authorName": "Ron Lach",
+      "authorUrl": "https://www.pexels.com/@ron-lach"
+    },
+    {
+      "segmentIndex": 3,
+      "searchPhrase": "person writing task on paper at desk",
+      "searchPhrases": [
+        "person writing task on paper at desk",
+        "desk planning for tomorrow"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "visualDescription": "Zostaw jedna kartke z pierwszym zadaniem na jutro Osoba pisze jedno zadanie na kartce i umieszcza j\u0105 na biurku Kartka z zadaniem Close-up Ruch do przodu (pisanie na kartce) Ruch do ty\u0142u (umieszczenie kartki na biurku) Zdefiniowanie pierwszego zadania na jutro",
+      "filePath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\videos\\03_person_writing_task_on_paper_at_desk.mp4",
+      "pexelsUrl": "https://www.pexels.com/video/high-angle-shot-of-a-person-writing-on-paper-9034874/",
+      "thumbnailUrl": "https://images.pexels.com/videos/9034874/adult-business-college-composition-9034874.jpeg?auto=compress\u0026cs=tinysrgb\u0026fit=crop\u0026h=1200\u0026w=630",
+      "pexelsRank": 1,
+      "candidateCount": 24,
+      "contentScore": 114,
+      "selectionReason": "Selected best scored candidate across multiple queries. query=\u0022person writing task on paper at desk\u0022 score=114 avoidPenalty=0.",
+      "authorName": "RDNE Stock project",
+      "authorUrl": "https://www.pexels.com/@rdne"
+    },
+    {
+      "segmentIndex": 4,
+      "searchPhrase": "person planning task in notebook at desk",
+      "searchPhrases": [
+        "person planning task in notebook at desk"
+      ],
+      "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+      "visualDescription": "Zakonczenie shorta: kadr powinien domykac praktyczna obietnice.",
+      "filePath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\videos\\04_person_planning_task_in_notebook_at_desk.mp4",
+      "pexelsUrl": "https://www.pexels.com/video/person-typing-on-a-laptop-7252715/",
+      "thumbnailUrl": "https://images.pexels.com/videos/7252715/pexels-photo-7252715.jpeg?auto=compress\u0026cs=tinysrgb\u0026fit=crop\u0026h=1200\u0026w=630",
+      "pexelsRank": 2,
+      "candidateCount": 12,
+      "contentScore": 111,
+      "selectionReason": "Selected best scored candidate across multiple queries. query=\u0022person planning task in notebook at desk\u0022 score=111 avoidPenalty=0.",
+      "authorName": "Ivan S",
+      "authorUrl": "https://www.pexels.com/@ivan-s"
+    }
+  ],
+  "diagnostics": {
+    "stage": "final",
+    "topicTitle": "Szybki reset biurka po pracy",
+    "sourceUrl": "offline://mvp-seed",
+    "createdAt": "2026-07-14T20:06:22.3638536+02:00",
+    "summary": {
+      "sceneCount": 3,
+      "segmentCount": 5,
+      "practicalSegmentCount": 3,
+      "issueCount": 2,
+      "warningCount": 0,
+      "errorCount": 0,
+      "estimatedDurationSeconds": 16.116,
+      "sourceCoverageRatio": 0.186,
+      "hasUnsupportedClaims": false
+    },
+    "script": {
+      "title": "Szybki reset biurka po pracy",
+      "hook": "Jak szybko zresetowac biurko po pracy?",
+      "ending": "Wyrzuc smieci, odloz rzeczy na miejsce i zostaw jedna kartke z pierwszym zadaniem na jutro.",
+      "totalVoiceWords": 35,
+      "totalVoiceCharacters": 217,
+      "sourceKeywords": [
+        "1",
+        "biurka",
+        "dzien",
+        "jutro",
+        "kartke",
+        "kolejnej",
+        "kolejny",
+        "konkretne",
+        "kroki",
+        "latwiej",
+        "lifestyle",
+        "miejsce",
+        "odloz",
+        "pierwszym",
+        "pomaga",
+        "porzadek",
+        "pracy",
+        "reset",
+        "rzeczy",
+        "sesji",
+        "smieci",
+        "starcie",
+        "szybki",
+        "wyrzuc",
+        "zaczac",
+        "zadaniem",
+        "zamknac",
+        "zostaw"
+      ],
+      "scriptKeywords": [
+        "1",
+        "after",
+        "biurka",
+        "biurko",
+        "biurku",
+        "close",
+        "desk",
+        "domykac",
+        "hook",
+        "jutro",
+        "kadr",
+        "kartce",
+        "kartka",
+        "kartke",
+        "kartki",
+        "kontekst",
+        "kosz",
+        "kosza",
+        "medium",
+        "miejsca",
+        "miejsce",
+        "natychmiast",
+        "niepotrzebnych",
+        "notebook",
+        "obietnice",
+        "odloz",
+        "odpowiednie",
+        "organizacja",
+        "organizing",
+        "osoba",
+        "otwierajacy",
+        "paper",
+        "person",
+        "pierwszego",
+        "pierwszym",
+        "pisanie",
+        "pisze",
+        "planning",
+        "pokazac",
+        "pracy",
+        "praktyczny",
+        "przedmiotow",
+        "przedmioty",
+        "przodu",
+        "ruch",
+        "rzeczy",
+        "short",
+        "shorta",
+        "shot",
+        "smieci",
+        "szybko",
+        "task",
+        "ty\u0142u",
+        "umieszcza",
+        "umieszczenie",
+        "usuniecie",
+        "usunieciu",
+        "work",
+        "writing",
+        "wyrzuc",
+        "wyrzuca",
+        "wyrzucanie",
+        "zadania",
+        "zadanie",
+        "zadaniem",
+        "zakonczenie",
+        "zamkniecie",
+        "zdefiniowanie",
+        "zostaw",
+        "zresetowac"
+      ],
+      "matchedSourceKeywords": [
+        "1",
+        "biurka",
+        "jutro",
+        "kartke",
+        "miejsce",
+        "odloz",
+        "pierwszym",
+        "pracy",
+        "rzeczy",
+        "smieci",
+        "wyrzuc",
+        "zadaniem",
+        "zostaw"
+      ],
+      "generatedKeywordsNotInSource": [
+        "after",
+        "biurko",
+        "biurku",
+        "close",
+        "desk",
+        "domykac",
+        "hook",
+        "kadr",
+        "kartce",
+        "kartka",
+        "kartki",
+        "kontekst",
+        "kosz",
+        "kosza",
+        "medium",
+        "miejsca",
+        "natychmiast",
+        "niepotrzebnych",
+        "notebook",
+        "obietnice",
+        "odpowiednie",
+        "organizacja",
+        "organizing",
+        "osoba",
+        "otwierajacy"
+      ]
+    },
+    "segments": [
+      {
+        "index": 0,
+        "name": "hook",
+        "role": "problem",
+        "voiceOver": "Jak szybko zresetowac biurko po pracy?",
+        "sourceFactIds": [],
+        "newInformation": "Ustawia problem i obietnice filmu.",
+        "onScreenText": "Jak szybko zresetowac biurko po pracy",
+        "visualDescription": "Hook otwierajacy short: kadr ma natychmiast pokazac problem lub praktyczny kontekst.",
+        "searchPhrase": "person planning task in notebook at desk",
+        "voiceWordCount": 6,
+        "voiceCharacterCount": 38,
+        "onScreenTextLength": 37,
+        "durationSeconds": 2.777415,
+        "wordsPerMinute": 129.616927970793,
+        "hasActionVerb": false,
+        "hasStoryboardLanguage": false,
+        "hasUnsupportedNumber": false,
+        "hasGenericVisualDescription": true,
+        "sourceKeywordHits": [
+          "pracy"
+        ],
+        "generatedKeywordsNotInSource": [
+          "biurko",
+          "desk",
+          "hook",
+          "kadr",
+          "kontekst",
+          "natychmiast",
+          "notebook",
+          "otwierajacy",
+          "person",
+          "planning",
+          "pokazac",
+          "praktyczny"
+        ],
+        "clipUrl": "https://www.pexels.com/video/efficient-desk-organization-with-checklist-33194181/",
+        "pexelsRank": 1,
+        "clipSelectionReason": "Selected best scored candidate across multiple queries. query=\u0022person planning task in notebook at desk\u0022 score=114 avoidPenalty=0."
+      },
+      {
+        "index": 1,
+        "name": "scene_01",
+        "role": "action",
+        "voiceOver": "Wyrzuc smieci.",
+        "sourceFactIds": [
+          "F1"
+        ],
+        "newInformation": "Krok ze zrodla: wyrzuc smieci.",
+        "onScreenText": "Wyrzuc smieci",
+        "visualDescription": "Wyrzuc smieci Osoba wyrzuca smieci z biurka na kosz Kosz na biurku Medium shot Ruch do przodu (wyrzucanie smieci) Ruch do ty\u0142u (zamkni\u0119cie kosza) Usuni\u0119cie niepotrzebnych przedmiot\u00F3w z biurka",
+        "searchPhrase": "person organizing desk after work",
+        "voiceWordCount": 2,
+        "voiceCharacterCount": 14,
+        "onScreenTextLength": 13,
+        "durationSeconds": 1.360998,
+        "wordsPerMinute": 88.17059246229606,
+        "hasActionVerb": true,
+        "hasStoryboardLanguage": false,
+        "hasUnsupportedNumber": false,
+        "hasGenericVisualDescription": false,
+        "sourceKeywordHits": [
+          "biurka",
+          "smieci",
+          "wyrzuc"
+        ],
+        "generatedKeywordsNotInSource": [
+          "after",
+          "biurku",
+          "desk",
+          "kosz",
+          "kosza",
+          "medium",
+          "niepotrzebnych",
+          "organizing",
+          "osoba",
+          "person",
+          "przedmiotow",
+          "przodu"
+        ],
+        "clipUrl": "https://www.pexels.com/video/a-woman-checking-the-documents-8298301/",
+        "pexelsRank": 2,
+        "clipSelectionReason": "Selected best scored candidate across multiple queries. query=\u0022person organizing desk after work\u0022 score=111 avoidPenalty=0."
+      },
+      {
+        "index": 2,
+        "name": "scene_02",
+        "role": "action",
+        "voiceOver": "Odloz rzeczy na miejsce.",
+        "sourceFactIds": [
+          "F1"
+        ],
+        "newInformation": "Krok ze zrodla: odloz rzeczy na miejsce.",
+        "onScreenText": "Odloz rzeczy na miejsce",
+        "visualDescription": "Odloz rzeczy na miejsce Osoba umieszcza przedmioty na odpowiednie miejsca w biurku Biurko Medium shot Ruch do przodu (umieszczenie przedmiot\u00F3w) Ruch do ty\u0142u (zamkni\u0119cie biurka) Organizacja biurka po usuni\u0119ciu smieci",
+        "searchPhrase": "person organizing desk after work",
+        "voiceWordCount": 4,
+        "voiceCharacterCount": 24,
+        "onScreenTextLength": 23,
+        "durationSeconds": 2.034376,
+        "wordsPerMinute": 117.97229224096235,
+        "hasActionVerb": true,
+        "hasStoryboardLanguage": false,
+        "hasUnsupportedNumber": false,
+        "hasGenericVisualDescription": false,
+        "sourceKeywordHits": [
+          "biurka",
+          "miejsce",
+          "odloz",
+          "rzeczy",
+          "smieci"
+        ],
+        "generatedKeywordsNotInSource": [
+          "after",
+          "biurko",
+          "biurku",
+          "desk",
+          "medium",
+          "miejsca",
+          "odpowiednie",
+          "organizacja",
+          "organizing",
+          "osoba",
+          "person",
+          "przedmiotow"
+        ],
+        "clipUrl": "https://www.pexels.com/video/a-person-putting-away-a-smartwatch-and-its-charger-10567194/",
+        "pexelsRank": 3,
+        "clipSelectionReason": "Selected best scored candidate across multiple queries. query=\u0022person organizing desk after work\u0022 score=108 avoidPenalty=0."
+      },
+      {
+        "index": 3,
+        "name": "scene_03",
+        "role": "action",
+        "voiceOver": "Zostaw jedna kartke z pierwszym zadaniem na jutro.",
+        "sourceFactIds": [
+          "F1"
+        ],
+        "newInformation": "Krok ze zrodla: zostaw jedna kartke z pierwszym zadaniem na jutro.",
+        "onScreenText": "Zostaw jedna kartke z pierwszym zadaniem",
+        "visualDescription": "Zostaw jedna kartke z pierwszym zadaniem na jutro Osoba pisze jedno zadanie na kartce i umieszcza j\u0105 na biurku Kartka z zadaniem Close-up Ruch do przodu (pisanie na kartce) Ruch do ty\u0142u (umieszczenie kartki na biurku) Zdefiniowanie pierwszego zadania na jutro",
+        "searchPhrase": "person writing task on paper at desk",
+        "voiceWordCount": 8,
+        "voiceCharacterCount": 50,
+        "onScreenTextLength": 40,
+        "durationSeconds": 3.415964,
+        "wordsPerMinute": 140.516703337623,
+        "hasActionVerb": true,
+        "hasStoryboardLanguage": false,
+        "hasUnsupportedNumber": false,
+        "hasGenericVisualDescription": false,
+        "sourceKeywordHits": [
+          "1",
+          "jutro",
+          "kartke",
+          "pierwszym",
+          "zadaniem",
+          "zostaw"
+        ],
+        "generatedKeywordsNotInSource": [
+          "biurku",
+          "close",
+          "desk",
+          "kartce",
+          "kartka",
+          "kartki",
+          "osoba",
+          "paper",
+          "person",
+          "pierwszego",
+          "pisanie",
+          "pisze"
+        ],
+        "clipUrl": "https://www.pexels.com/video/high-angle-shot-of-a-person-writing-on-paper-9034874/",
+        "pexelsRank": 1,
+        "clipSelectionReason": "Selected best scored candidate across multiple queries. query=\u0022person writing task on paper at desk\u0022 score=114 avoidPenalty=0."
+      },
+      {
+        "index": 4,
+        "name": "ending",
+        "role": "cta",
+        "voiceOver": "Wyrzuc smieci, odloz rzeczy na miejsce i zostaw jedna kartke z pierwszym zadaniem na jutro.",
+        "sourceFactIds": [],
+        "newInformation": "Domyka obietnice filmu i daje jedno zadanie.",
+        "onScreenText": "Wyrzuc smieci, odloz rzeczy na miejsce i",
+        "visualDescription": "Zakonczenie shorta: kadr powinien domykac praktyczna obietnice.",
+        "searchPhrase": "person planning task in notebook at desk",
+        "voiceWordCount": 15,
+        "voiceCharacterCount": 91,
+        "onScreenTextLength": 40,
+        "durationSeconds": 6.527438,
+        "wordsPerMinute": 137.87951720108256,
+        "hasActionVerb": true,
+        "hasStoryboardLanguage": false,
+        "hasUnsupportedNumber": false,
+        "hasGenericVisualDescription": true,
+        "sourceKeywordHits": [
+          "1",
+          "jutro",
+          "kartke",
+          "miejsce",
+          "odloz",
+          "pierwszym",
+          "rzeczy",
+          "smieci",
+          "wyrzuc",
+          "zadaniem",
+          "zostaw"
+        ],
+        "generatedKeywordsNotInSource": [
+          "desk",
+          "domykac",
+          "kadr",
+          "notebook",
+          "obietnice",
+          "person",
+          "planning",
+          "shorta",
+          "task",
+          "zakonczenie"
+        ],
+        "clipUrl": "https://www.pexels.com/video/person-typing-on-a-laptop-7252715/",
+        "pexelsRank": 2,
+        "clipSelectionReason": "Selected best scored candidate across multiple queries. query=\u0022person planning task in notebook at desk\u0022 score=111 avoidPenalty=0."
+      }
+    ],
+    "issues": [
+      {
+        "severity": "info",
+        "stage": "clips",
+        "segment": "hook",
+        "code": "generic_visual_description",
+        "message": "Opis wizualny jest ogolny i utrudnia ocene dopasowania klipu.",
+        "evidence": "Hook otwierajacy short: kadr ma natychmiast pokazac problem lub praktyczny kontekst.",
+        "recommendation": "Dodaj konkretny obiekt, akcje i kadr."
+      },
+      {
+        "severity": "info",
+        "stage": "clips",
+        "segment": "ending",
+        "code": "generic_visual_description",
+        "message": "Opis wizualny jest ogolny i utrudnia ocene dopasowania klipu.",
+        "evidence": "Zakonczenie shorta: kadr powinien domykac praktyczna obietnice.",
+        "recommendation": "Dodaj konkretny obiekt, akcje i kadr."
+      }
+    ]
+  },
+  "outputPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\short.mp4",
+  "debugLogPath": "C:\\Users\\Piotr\\Documents\\Generatot tiktok\\TikTokGenerator\\bin\\Debug\\net10.0-windows\\Output\\20260714-200454-Szybki reset biurka po pracy\\debug\\debug.log",
+  "createdAt": "2026-07-14T20:06:22.3700132+02:00"
+}

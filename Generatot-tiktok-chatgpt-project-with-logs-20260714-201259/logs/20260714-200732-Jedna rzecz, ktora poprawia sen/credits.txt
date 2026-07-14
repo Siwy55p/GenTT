@@ -1,0 +1,15 @@
+Title: Jedna rzecz, która poprawia sen
+Video clips provided by Pexels:
+
+Eva Bronzini - https://www.pexels.com/video/a-person-typing-on-a-cellphone-6962433/
+cottonbro studio - https://www.pexels.com/video/woman-writing-in-her-notebook-at-midnight-6940837/
+Jakub Zerdzicki - https://www.pexels.com/video/efficient-desk-organization-with-checklist-33194181/
+cottonbro studio - https://www.pexels.com/video/woman-writing-on-her-notebook-in-bed-6716603/
+Polina ⠀ - https://www.pexels.com/video/a-woman-flipping-the-pages-of-her-journal-6541172/
+
+Clip diagnostics:
+Segment 00: rank=1; query=close up smartphone productivity app; visual=Hook otwierajacy short: kadr ma natychmiast pokazac problem lub praktyczny kontekst.; reason=Selected best scored candidate across multiple queries. query="close up smartphone productivity app" score=102 avoidPenalty=12.
+Segment 01: rank=1; query=calm evening routine bedroom notebook; visual=Wybierz jedna czynnosc bez ekranu Osoba wybiera jedno zadanie z listy na papierku Papier Medium shot Początek ruchu: Osoba trzyma papier w ręce Koniec ruchu: Osoba wybiera jedno zadanie z listy na papierku Krok ze zrodla: wybierz jedna czynnosc bez ekranu; reason=Selected best scored candidate across multiple queries. query="calm evening routine bedroom notebook" score=114 avoidPenalty=0.
+Segment 02: rank=1; query=person organizing desk after work; visual=Odloz telefon poza zasieg reki Osoba odloz telefon na stolik poza zasieg reki Telefon Close-up Początek ruchu: Osoba trzyma telefon w ręce Koniec ruchu: Telefon poza zasieg reki na stoliku Krok ze zrodla: odloz telefon poza zasieg reki; reason=Selected best scored candidate across multiple queries. query="person organizing desk after work" score=114 avoidPenalty=0.
+Segment 03: rank=2; query=calm evening routine bedroom notebook; visual=Przygotuj jedna rzecz na rano Osoba przygotowuje jedno przedmiot na rano na stole Stolik Medium shot Początek ruchu: Osoba trzyma przedmiot w ręce Koniec ruchu: Przedmiot na stole Krok ze zrodla: przygotuj jedna rzecz na rano; reason=Selected best scored candidate across multiple queries. query="calm evening routine bedroom notebook" score=111 avoidPenalty=0.
+Segment 04: rank=3; query=calm evening routine bedroom notebook; visual=Zakonczenie shorta: kadr powinien domykac praktyczna obietnice.; reason=Selected best scored candidate across multiple queries. query="calm evening routine bedroom notebook" score=108 avoidPenalty=0.

@@ -1,0 +1,80 @@
+{
+  "segments": [
+    {
+      "segmentName": "hook",
+      "visibleContent": "Jak szybko zresetowac biurko po pracy?",
+      "personAction": "Osoba patrzy na kamera z pytaniem o szybki reset biurka po pracy",
+      "primaryObject": "Kamera",
+      "shotType": "Close-up",
+      "movementStart": "Sta\u0142y",
+      "movementEnd": "Sta\u0142y",
+      "resultToShow": "Wizualizacja problemu balagana po pracy",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "person planning task in notebook at desk",
+        "desk clutter after work"
+      ]
+    },
+    {
+      "segmentName": "scene_01",
+      "visibleContent": "Wyrzuc smieci",
+      "personAction": "Osoba wyrzuca smieci z biurka na kosz",
+      "primaryObject": "Kosz na biurku",
+      "shotType": "Medium shot",
+      "movementStart": "Ruch do przodu (wyrzucanie smieci)",
+      "movementEnd": "Ruch do ty\u0142u (zamkni\u0119cie kosza)",
+      "resultToShow": "Usuni\u0119cie niepotrzebnych przedmiot\u00F3w z biurka",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "person throwing trash from desk"
+      ]
+    },
+    {
+      "segmentName": "scene_02",
+      "visibleContent": "Odloz rzeczy na miejsce",
+      "personAction": "Osoba umieszcza przedmioty na odpowiednie miejsca w biurku",
+      "primaryObject": "Biurko",
+      "shotType": "Medium shot",
+      "movementStart": "Ruch do przodu (umieszczenie przedmiot\u00F3w)",
+      "movementEnd": "Ruch do ty\u0142u (zamkni\u0119cie biurka)",
+      "resultToShow": "Organizacja biurka po usuni\u0119ciu smieci",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "desk organization after work"
+      ]
+    },
+    {
+      "segmentName": "scene_03",
+      "visibleContent": "Zostaw jedna kartke z pierwszym zadaniem na jutro",
+      "personAction": "Osoba pisze jedno zadanie na kartce i umieszcza j\u0105 na biurku",
+      "primaryObject": "Kartka z zadaniem",
+      "shotType": "Close-up",
+      "movementStart": "Ruch do przodu (pisanie na kartce)",
+      "movementEnd": "Ruch do ty\u0142u (umieszczenie kartki na biurku)",
+      "resultToShow": "Zdefiniowanie pierwszego zadania na jutro",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "person writing task on paper at desk",
+        "desk planning for tomorrow"
+      ]
+    },
+    {
+      "segmentName": "ending",
+      "visibleContent": "Wyrzuc smieci, odloz rzeczy na miejsce i",
+      "personAction": "Osoba zako\u0144czy\u0142a wszystkie kroki i patrzy na kamer\u0119 z u\u015Bmiechem",
+      "primaryObject": "Biurko z organizowanymi przedmiotami",
+      "shotType": "Medium shot",
+      "movementStart": "Sta\u0142y",
+      "movementEnd": "Sta\u0142y",
+      "resultToShow": "Biurko gotowe na kolejny start",
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "searchPhrases": [
+        "person planning task in notebook at desk",
+        "desk ready for next day"
+      ]
+    }
+  ],
+  "globalAvoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll"
+}

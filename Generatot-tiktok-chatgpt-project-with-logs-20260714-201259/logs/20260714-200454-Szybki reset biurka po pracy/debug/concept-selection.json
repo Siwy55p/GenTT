@@ -1,0 +1,70 @@
+{
+  "directions": [
+    {
+      "id": "D1",
+      "name": "Szybki reset biurka: 3 kroki w 25 sekund",
+      "structure": "trzyetapowy tutorial",
+      "hookAngle": "Przyk\u0142adowy balagan po pracy",
+      "payoff": "Zostawienie biurka gotowego na kolejny start w 25 sekund",
+      "scores": {
+        "usefulness": 9,
+        "specificity": 8,
+        "freshness": 7,
+        "sourceAlignment": 10,
+        "visualPotential": 8,
+        "hookStrength": 9
+      },
+      "totalScore": 51
+    },
+    {
+      "id": "D2",
+      "name": "10 sekund na reset biurka: Jak szybko zacz\u0105\u0107 nowy dzie\u0144",
+      "structure": "blad -\u003E poprawka",
+      "hookAngle": "Za du\u017Co czasu na reset biurka?",
+      "payoff": "Zostawienie biurka gotowego na kolejny start w 10 sekund",
+      "scores": {
+        "usefulness": 8,
+        "specificity": 7,
+        "freshness": 8,
+        "sourceAlignment": 9,
+        "visualPotential": 7,
+        "hookStrength": 8
+      },
+      "totalScore": 47
+    },
+    {
+      "id": "D3",
+      "name": "Biurko po pracy: 3 rzeczy, kt\u00F3re zawsze nale\u017Cy zrobic",
+      "structure": "przed -\u003E po",
+      "hookAngle": "Co zrobic po pracy, aby biurko by\u0142o gotowe?",
+      "payoff": "Zostawienie biurka gotowego na kolejny start w 3 krokach",
+      "scores": {
+        "usefulness": 7,
+        "specificity": 9,
+        "freshness": 6,
+        "sourceAlignment": 8,
+        "visualPotential": 9,
+        "hookStrength": 7
+      },
+      "totalScore": 46
+    }
+  ],
+  "selectedDirectionId": "D1",
+  "selectedReason": "Najlepsza kombinacja u\u017Cyteczno\u015Bci, specyfiki i zgodno\u015Bci z \u017Ar\u00F3d\u0142em. Kierunek D1 jest najbardziej konkretny, zgodny z danymi i ma wysoki potencja\u0142 wizualny.",
+  "selectedDirection": {
+    "id": "D1",
+    "name": "Szybki reset biurka: 3 kroki w 25 sekund",
+    "structure": "trzyetapowy tutorial",
+    "hookAngle": "Przyk\u0142adowy balagan po pracy",
+    "payoff": "Zostawienie biurka gotowego na kolejny start w 25 sekund",
+    "scores": {
+      "usefulness": 9,
+      "specificity": 8,
+      "freshness": 7,
+      "sourceAlignment": 10,
+      "visualPotential": 8,
+      "hookStrength": 9
+    },
+    "totalScore": 51
+  }
+}

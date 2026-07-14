@@ -1,0 +1,51 @@
+{
+  "directions": [
+    {
+      "id": "D1",
+      "name": "Kierunek 1: Przygotowanie jednej rzeczy na rano",
+      "structure": "singleStep",
+      "hookAngle": "problemToSolution",
+      "payoff": "wybierz jedna czynnosc bez ekranu",
+      "scores": {
+        "usefulness": 8,
+        "specificity": 7,
+        "freshness": 6,
+        "sourceAlignment": 9,
+        "visualPotential": 7,
+        "hookStrength": 8
+      }
+    },
+    {
+      "id": "D2",
+      "name": "Kierunek 2: Odczytanie sygnalu odciecia dnia",
+      "structure": "singleStep",
+      "hookAngle": "problemToSolution",
+      "payoff": "odloz telefon poza zasieg reki",
+      "scores": {
+        "usefulness": 7,
+        "specificity": 6,
+        "freshness": 5,
+        "sourceAlignment": 8,
+        "visualPotential": 6,
+        "hookStrength": 7
+      }
+    },
+    {
+      "id": "D3",
+      "name": "Kierunek 3: Zasieg reki jako punkt odniesienia",
+      "structure": "singleStep",
+      "hookAngle": "problemToSolution",
+      "payoff": "przygotuj jedna rzecz na rano",
+      "scores": {
+        "usefulness": 9,
+        "specificity": 8,
+        "freshness": 7,
+        "sourceAlignment": 9,
+        "visualPotential": 8,
+        "hookStrength": 9
+      }
+    }
+  ],
+  "selectedDirectionId": "D3",
+  "selectedReason": "Najlepszy kierunek na podstawie wysokich ocen: usefulness (9), specificity (8), freshness (7), sourceAlignment (9), visualPotential (8), hookStrength (9). Najlepszy kierunek jest najbardziej zgodny z danymi źródłowymi i oferuje najwięcej konkretnych kroków dla widzów."
+}

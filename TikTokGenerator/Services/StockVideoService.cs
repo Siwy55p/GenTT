@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TikTokGenerator.Models;
@@ -53,7 +54,7 @@ public sealed class StockVideoService
                 outputDirectory,
                 $"{segment.Index:00}_{SanitizeFileName(segment.SearchPhrase)}.mp4");
 
-            await DownloadFileAsync(apiKey, selection.VideoFile.Link, filePath, cancellationToken);
+            await DownloadFileAsync(apiKey, selection.VideoFile.Link, filePath, logger, cancellationToken);
             logger?.Info($"Downloaded Pexels clip segment={segment.Index} path={filePath}");
             usedVideoUrls.Add(selection.Video.Url);
 
@@ -191,8 +192,11 @@ public sealed class StockVideoService
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.TryAddWithoutValidation("Authorization", apiKey);
 
+        var stopwatch = Stopwatch.StartNew();
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+        stopwatch.Stop();
+        logger?.Info($"Pexels search response query=\"{query}\" status={(int)response.StatusCode}; elapsedMs={stopwatch.ElapsedMilliseconds}; bodyChars={responseBody.Length}; rateLimit={ReadHeader(response, "X-Ratelimit-Limit")}; remaining={ReadHeader(response, "X-Ratelimit-Remaining")}; reset={ReadHeader(response, "X-Ratelimit-Reset")}");
         if (logger is not null)
         {
             await logger.SaveTextAsync(debugFileName, responseBody, cancellationToken);
@@ -205,6 +209,7 @@ public sealed class StockVideoService
 
         var searchResponse = JsonSerializer.Deserialize<PexelsSearchResponse>(responseBody, JsonOptions)
             ?? throw new InvalidOperationException("Pexels zwrocil pusta odpowiedz.");
+        logger?.Info($"Pexels parsed query=\"{query}\" videos={searchResponse.Videos.Count}; segment={segment.Index}; segmentName={segment.Name}");
 
         return searchResponse.Videos
             .Select((video, index) =>
@@ -310,12 +315,16 @@ public sealed class StockVideoService
         string apiKey,
         string url,
         string filePath,
+        GenerationDebugLogger? logger,
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.TryAddWithoutValidation("Authorization", apiKey);
 
+        var stopwatch = Stopwatch.StartNew();
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        stopwatch.Stop();
+        logger?.Info($"Pexels download response status={(int)response.StatusCode}; elapsedMs={stopwatch.ElapsedMilliseconds}; url={url}; contentLength={response.Content.Headers.ContentLength?.ToString() ?? string.Empty}");
         if (!response.IsSuccessStatusCode)
         {
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -325,6 +334,16 @@ public sealed class StockVideoService
         await using var remoteStream = await response.Content.ReadAsStreamAsync(cancellationToken);
         await using var fileStream = File.Create(filePath);
         await remoteStream.CopyToAsync(fileStream, cancellationToken);
+    }
+
+    private static string ReadHeader(HttpResponseMessage response, string name)
+    {
+        if (response.Headers.TryGetValues(name, out var values))
+        {
+            return values.FirstOrDefault() ?? string.Empty;
+        }
+
+        return string.Empty;
     }
 
     private static PexelsVideoFile? SelectBestVideoFile(PexelsVideo video)

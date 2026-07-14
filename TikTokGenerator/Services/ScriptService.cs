@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -271,6 +272,15 @@ public sealed class ScriptService
 
     public ShortScript ApplyVisualPlan(ShortScript script, VisualPlan visualPlan)
     {
+        return ApplyVisualPlan(script, visualPlan, new SelectedTopic
+        {
+            Title = script.Title,
+            SourceText = script.Title
+        });
+    }
+
+    public ShortScript ApplyVisualPlan(ShortScript script, VisualPlan visualPlan, SelectedTopic topic)
+    {
         foreach (var item in script.Scenes.Select((scene, index) => new { scene, index }))
         {
             var segmentName = $"scene_{item.index + 1:00}";
@@ -293,28 +303,141 @@ public sealed class ScriptService
             item.scene.AvoidVisuals = NormalizeWhitespace(string.Join(
                 ", ",
                 plan.AvoidVisuals,
-                visualPlan.GlobalAvoidVisuals));
-            item.scene.SearchPhrases = plan.SearchPhrases
-                .Where(phrase => !string.IsNullOrWhiteSpace(phrase))
-                .Select(NormalizeWhitespace)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Take(4)
-                .ToList();
+                visualPlan.GlobalAvoidVisuals,
+                BuildDomainAvoidVisuals(topic, item.scene.VoiceOver)));
+            item.scene.SearchPhrases = NormalizeVisualSearchPhrases(topic, item.scene.VoiceOver, plan.SearchPhrases);
             item.scene.SearchPhrase = item.scene.SearchPhrases.FirstOrDefault()
-                ?? BuildSearchPhrase(item.scene, new SelectedTopic { Title = script.Title, SourceText = string.Empty });
+                ?? BuildSearchPhrase(item.scene, topic);
         }
 
         if (visualPlan.Segments.FirstOrDefault(segment => segment.SegmentName.Equals("hook", StringComparison.OrdinalIgnoreCase)) is { } hookPlan)
         {
-            script.HookSearchPhrase = hookPlan.SearchPhrases.FirstOrDefault() ?? script.HookSearchPhrase;
+            script.HookSearchPhrase = NormalizeVisualSearchPhrases(topic, script.Hook, hookPlan.SearchPhrases)
+                .FirstOrDefault()
+                ?? script.HookSearchPhrase;
         }
 
         if (visualPlan.Segments.FirstOrDefault(segment => segment.SegmentName.Equals("ending", StringComparison.OrdinalIgnoreCase)) is { } endingPlan)
         {
-            script.EndingSearchPhrase = endingPlan.SearchPhrases.FirstOrDefault() ?? script.EndingSearchPhrase;
+            script.EndingSearchPhrase = NormalizeVisualSearchPhrases(topic, script.Ending, endingPlan.SearchPhrases)
+                .FirstOrDefault()
+                ?? script.EndingSearchPhrase;
         }
 
         return script;
+    }
+
+    private static List<string> NormalizeVisualSearchPhrases(
+        SelectedTopic topic,
+        string segmentText,
+        IEnumerable<string> rawPhrases)
+    {
+        var phrases = rawPhrases
+            .Where(phrase => !string.IsNullOrWhiteSpace(phrase))
+            .Select(NormalizeWhitespace)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var context = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText} {segmentText}");
+        if (IsAiNotesContext(context))
+        {
+            var domainPhrases = BuildAiNotesSearchPhrases(segmentText);
+            var filteredPhrases = phrases
+                .Where(phrase => !IsWeakAiNotesSearchPhrase(phrase))
+                .ToList();
+
+            return domainPhrases
+                .Concat(filteredPhrases)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(4)
+                .ToList();
+        }
+
+        return phrases
+            .Take(4)
+            .ToList();
+    }
+
+    private static string BuildDomainAvoidVisuals(SelectedTopic topic, string segmentText)
+    {
+        var context = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText} {segmentText}");
+        if (IsAiNotesContext(context))
+        {
+            return "food delivery app, smartphone home screen, social media scrolling, beauty routine, random selfie, unrelated phone gallery";
+        }
+
+        return string.Empty;
+    }
+
+    private static bool IsAiNotesContext(string normalized)
+    {
+        return normalized.Contains("transkrypc", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("spotkan", StringComparison.OrdinalIgnoreCase)
+            || (normalized.Contains("nagran", StringComparison.OrdinalIgnoreCase)
+                && (normalized.Contains("notatk", StringComparison.OrdinalIgnoreCase)
+                    || normalized.Contains("decyzj", StringComparison.OrdinalIgnoreCase)
+                    || normalized.Contains("zadan", StringComparison.OrdinalIgnoreCase)
+                    || normalized.Contains("liste", StringComparison.OrdinalIgnoreCase)))
+            || (normalized.Contains("aplikac", StringComparison.OrdinalIgnoreCase)
+                && normalized.Contains("notatk", StringComparison.OrdinalIgnoreCase))
+            || (normalized.Contains("decyzj", StringComparison.OrdinalIgnoreCase)
+                && (normalized.Contains("notatk", StringComparison.OrdinalIgnoreCase)
+                    || normalized.Contains("nagran", StringComparison.OrdinalIgnoreCase)
+                    || normalized.Contains("transkrypc", StringComparison.OrdinalIgnoreCase)
+                    || normalized.Contains("spotkan", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static List<string> BuildAiNotesSearchPhrases(string text)
+    {
+        var normalized = SourceAnalysisDiagnosticsService.Normalize(text);
+        if (normalized.Contains("porownaj", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("fragment", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("wynik", StringComparison.OrdinalIgnoreCase))
+        {
+            return
+            [
+                "person checking meeting transcript and notes on laptop",
+                "person reviewing audio transcript on laptop"
+            ];
+        }
+
+        if (normalized.Contains("popros", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("liste", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("zadan", StringComparison.OrdinalIgnoreCase))
+        {
+            return
+            [
+                "person typing meeting notes prompt on laptop",
+                "meeting notes action items laptop"
+            ];
+        }
+
+        if (normalized.Contains("wgraj", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("transkrypc", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("nagranie", StringComparison.OrdinalIgnoreCase))
+        {
+            return
+            [
+                "person uploading audio transcript on laptop",
+                "meeting transcript on laptop screen"
+            ];
+        }
+
+        return
+        [
+            "person reviewing meeting transcript on laptop",
+            "hands typing meeting notes on laptop"
+        ];
+    }
+
+    private static bool IsWeakAiNotesSearchPhrase(string phrase)
+    {
+        var normalized = SourceAnalysisDiagnosticsService.Normalize(phrase);
+        return normalized.Contains("smartphone home screen", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("home screen apps", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("phone gallery", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("food delivery", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("close up smartphone productivity app", StringComparison.OrdinalIgnoreCase);
     }
 
     public ShortScript ShortenToWordBudget(
@@ -378,12 +501,15 @@ public sealed class ScriptService
         };
 
         var endpoint = new Uri(new Uri(options.OllamaBaseUrl.TrimEnd('/') + "/"), "api/generate");
-        logger?.Info($"Calling Ollama endpoint={endpoint} model={request.model} stage={debugName}");
+        logger?.Info($"Calling Ollama endpoint={endpoint} model={request.model} stage={debugName}; promptChars={prompt.Length}; schemaType={formatSchema.GetType().Name}; temperature={temperature:0.###}; numPredict={numPredict}");
 
         try
         {
+            var stopwatch = Stopwatch.StartNew();
             using var response = await _httpClient.PostAsJsonAsync(endpoint, request, JsonOptions, cancellationToken);
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            stopwatch.Stop();
+            logger?.Info($"Ollama HTTP response stage={debugName}; status={(int)response.StatusCode}; elapsedMs={stopwatch.ElapsedMilliseconds}; bodyChars={responseBody.Length}");
             if (logger is not null)
             {
                 await logger.SaveTextAsync($"ollama-{debugName}-http-response.json", responseBody, cancellationToken);
@@ -396,6 +522,7 @@ public sealed class ScriptService
 
             var ollamaResponse = JsonSerializer.Deserialize<OllamaGenerateResponse>(responseBody, JsonOptions)
                 ?? throw new InvalidOperationException("Ollama zwrocila pusta odpowiedz.");
+            logger?.Info($"Ollama model response stage={debugName}; responseChars={ollamaResponse.Response.Length}");
 
             if (logger is not null)
             {
@@ -984,8 +1111,10 @@ public sealed class ScriptService
         GenerationDebugLogger? logger = null)
     {
         var changed = false;
+        var hookPromiseDowngraded = false;
         var sourceStepCoverage = ScriptCoversSourceSteps(analysis, script);
         var sceneProgression = ScenesHaveDistinctNewInformation(script);
+        logger?.Info($"Content review sanitation started. approved={review.Approved}; critical={review.HasCriticalErrors}; issues={review.Issues.Count}; sourceStepCoverage={sourceStepCoverage}; sceneProgression={sceneProgression}; promiseCheck=\"{ShortenSentence(review.PromiseCheck, 160)}\"");
         foreach (var issue in review.Issues)
         {
             if (IsFalseNewInformationComplaint(issue, sourceStepCoverage, sceneProgression))
@@ -1003,22 +1132,32 @@ public sealed class ScriptService
                 issue.Severity = "warning";
                 issue.Message = $"{issue.Message} [Zdegradowano: hook i payoff sa powiazane ze zrodlem oraz krokami scenariusza.]";
                 changed = true;
+                hookPromiseDowngraded = true;
             }
         }
 
         if (!changed)
         {
+            logger?.Info("Content review sanitation finished without changes.");
             return;
         }
 
         if (!review.HasCriticalErrors)
         {
             review.Approved = true;
+            if (hookPromiseDowngraded)
+            {
+                review.PromiseCheck = "Hook i payoff sa zgodne ze zrodlem oraz krokami scenariusza po sanityzacji recenzji.";
+                logger?.Warning("Content review promiseCheck neutralized after source-aligned hook/payoff downgrade.");
+            }
+
             if (review.UsefulnessScore == 0)
             {
                 review.UsefulnessScore = 7;
             }
         }
+
+        logger?.Info($"Content review sanitation finished. approved={review.Approved}; critical={review.HasCriticalErrors}; usefulness={review.UsefulnessScore}; promiseCheck=\"{ShortenSentence(review.PromiseCheck, 160)}\"");
     }
 
     private static bool IsFalseNewInformationComplaint(
@@ -1292,6 +1431,7 @@ public sealed class ScriptService
     {
         var voiceOver = EnsureSentence(CapitalizeFirst(step.Text));
         var searchPhrase = BuildSearchPhraseForSourceStep(topic, step.Text);
+        var avoidVisuals = BuildDomainAvoidVisuals(topic, step.Text);
         return new ScriptScene
         {
             Role = "action",
@@ -1304,7 +1444,9 @@ public sealed class ScriptService
             VisualDescription = $"Osoba wykonuje krok ze zrodla: {voiceOver}",
             SearchPhrase = searchPhrase,
             SearchPhrases = [searchPhrase, BuildSearchPhraseFromText($"{step.Text} {topic.Title}")],
-            AvoidVisuals = "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+            AvoidVisuals = string.IsNullOrWhiteSpace(avoidVisuals)
+                ? "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll"
+                : $"random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll, {avoidVisuals}",
             SceneGoal = "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
         };
     }
@@ -1340,6 +1482,11 @@ public sealed class ScriptService
     private static string BuildSearchPhraseForSourceStep(SelectedTopic topic, string step)
     {
         var normalized = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {step}");
+        if (IsAiNotesContext(normalized))
+        {
+            return BuildAiNotesSearchPhrases(step).First();
+        }
+
         if (normalized.Contains("biurk", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("smieci", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("odloz", StringComparison.OrdinalIgnoreCase)
@@ -2860,6 +3007,12 @@ public sealed class ScriptService
     private static string BuildSearchPhraseFromText(string value)
     {
         var lower = value.ToLowerInvariant();
+        var normalized = SourceAnalysisDiagnosticsService.Normalize(value);
+        if (IsAiNotesContext(normalized))
+        {
+            return BuildAiNotesSearchPhrases(value).First();
+        }
+
         if (lower.Contains("notatnik")
             || lower.Contains("notes")
             || lower.Contains("notebook")

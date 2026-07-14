@@ -1,0 +1,37 @@
+{
+  "mainThesis": "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny",
+  "facts": [
+    {
+      "id": "F1",
+      "text": "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny",
+      "evidence": "Praktyczna teza"
+    }
+  ],
+  "steps": [
+    {
+      "id": "S1",
+      "text": "wyrzuc smieci",
+      "sourceFactIds": [
+        "F1"
+      ]
+    },
+    {
+      "id": "S2",
+      "text": "odloz rzeczy na miejsce",
+      "sourceFactIds": [
+        "F1"
+      ]
+    },
+    {
+      "id": "S3",
+      "text": "zostaw jedna kartke z pierwszym zadaniem na jutro",
+      "sourceFactIds": [
+        "F1"
+      ]
+    }
+  ],
+  "examples": [],
+  "limitations": [],
+  "riskyClaims": [],
+  "mostUsefulFragment": "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny"
+}

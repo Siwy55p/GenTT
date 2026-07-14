@@ -114,7 +114,7 @@ public sealed class ShortGenerator
             progress?.Report(new ShortGenerationProgress(48, "Tworze plan wizualny"));
             var visualPlan = await _scriptService.CreateVisualPlanAsync(topic, sourceAnalysis, script, options, logger, cancellationToken);
             await logger.SaveJsonAsync("visual-plan.json", visualPlan, cancellationToken);
-            script = _scriptService.ApplyVisualPlan(script, visualPlan);
+            script = _scriptService.ApplyVisualPlan(script, visualPlan, topic);
             await logger.SaveJsonAsync("script-with-visual-plan.json", script, cancellationToken);
             voiceSegments = ApplyScriptMetadataToVoiceSegments(script, voiceSegments);
 
@@ -133,6 +133,27 @@ public sealed class ShortGenerator
             ShortDiagnosticsService.LogSummary(logger, "Clips", clipDiagnostics);
 
             progress?.Report(new ShortGenerationProgress(68, "Sprawdzam bramke jakosci"));
+            var qualityGateScriptDiagnostics = ShortDiagnosticsService.CreateScriptDiagnostics(topic, script);
+            await logger.SaveJsonAsync("quality-gate-script-analysis.json", qualityGateScriptDiagnostics, cancellationToken);
+            ShortDiagnosticsService.LogSummary(logger, "Quality gate script", qualityGateScriptDiagnostics);
+            await logger.SaveJsonAsync(
+                "quality-gate-input-summary.json",
+                new
+                {
+                    script = qualityGateScriptDiagnostics.Summary,
+                    voice = voiceDiagnostics.Summary,
+                    clips = clipDiagnostics.Summary,
+                    review = new
+                    {
+                        contentReview.Approved,
+                        contentReview.UsefulnessScore,
+                        contentReview.PromiseCheck,
+                        contentReview.AudienceValueCheck,
+                        issueCount = contentReview.Issues.Count,
+                        criticalIssueCount = contentReview.Issues.Count(issue => issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+                    }
+                },
+                cancellationToken);
             var qualityGate = QualityGateService.EvaluateBeforeRender(
                 topic,
                 sourceAnalysis,
@@ -142,6 +163,7 @@ public sealed class ShortGenerator
                 voiceSegments,
                 clips);
             await logger.SaveJsonAsync("quality-gate.json", qualityGate, cancellationToken);
+            LogQualityGate(logger, qualityGate);
             if (!qualityGate.Passed)
             {
                 var blockingIssues = qualityGate.Issues
@@ -157,6 +179,16 @@ public sealed class ShortGenerator
                 var errors = string.Join(
                     Environment.NewLine,
                     blockingIssues.Select(issue => $"- {issue.Code}: {issue.Message}"));
+                if (string.IsNullOrWhiteSpace(errors))
+                {
+                    errors = string.Join(
+                        Environment.NewLine,
+                        qualityGate.Criteria
+                            .Where(criterion => criterion.Points < criterion.MaxPoints)
+                            .OrderBy(criterion => criterion.Points - criterion.MaxPoints)
+                            .Select(criterion => $"- {criterion.Name}: {criterion.Points}/{criterion.MaxPoints}. {criterion.Reason}"));
+                }
+
                 throw new InvalidOperationException(
                     $"Bramka jakosci zatrzymala render. Wynik: {qualityGate.Score}/{qualityGate.Criteria.Sum(item => item.MaxPoints)}.{Environment.NewLine}{errors}{Environment.NewLine}{Environment.NewLine}Szczegoly: debug/quality-gate.json");
             }
@@ -222,6 +254,40 @@ public sealed class ShortGenerator
                 || issue.Code.Contains("promise", StringComparison.OrdinalIgnoreCase)
                 || issue.Code.Contains("newInformation", StringComparison.OrdinalIgnoreCase)
                 || issue.Code.Contains("step", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void LogQualityGate(GenerationDebugLogger logger, QualityGateReport report)
+    {
+        var maxScore = report.Criteria.Sum(criterion => criterion.MaxPoints);
+        logger.Info($"Quality gate result: passed={report.Passed}; score={report.Score}/{maxScore}; minimum={report.MinimumScore}; issueCount={report.Issues.Count}");
+        foreach (var criterion in report.Criteria)
+        {
+            var missing = criterion.MaxPoints - criterion.Points;
+            logger.Info($"Quality gate criterion: {criterion.Name}; points={criterion.Points}/{criterion.MaxPoints}; missing={missing}; reason={criterion.Reason}");
+        }
+
+        foreach (var issue in report.Issues)
+        {
+            if (issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+            {
+                logger.Error($"Quality gate issue [{issue.Severity}] {issue.Code}: {issue.Message}");
+            }
+            else
+            {
+                logger.Warning($"Quality gate issue [{issue.Severity}] {issue.Code}: {issue.Message}");
+            }
+        }
+
+        if (!report.Passed)
+        {
+            var weakest = report.Criteria
+                .OrderByDescending(criterion => criterion.MaxPoints - criterion.Points)
+                .FirstOrDefault();
+            if (weakest is not null)
+            {
+                logger.Warning($"Quality gate failed. Weakest criterion={weakest.Name}; points={weakest.Points}/{weakest.MaxPoints}; reason={weakest.Reason}");
+            }
+        }
     }
 
     private static string CreateProjectDirectory(string title)

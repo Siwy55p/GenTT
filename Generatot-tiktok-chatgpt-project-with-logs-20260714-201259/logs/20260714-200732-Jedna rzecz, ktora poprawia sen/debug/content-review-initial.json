@@ -1,0 +1,52 @@
+{
+  "issues": [
+    {
+      "severity": "warning",
+      "segment": "hook",
+      "code": "hookDoesNotMatch",
+      "message": "Hook \u0027Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia.\u0027 nie jest zgodny z mainThesis \u0027spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia d: wybierz jedna czynnosc bez ekranu, odloz telefon poza zasieg reki, przygotuj jedna rzecz na rano\u0027. Hook powinien byc jednym z podpunktow mainThesis, a nie ca\u0142a fraza z dodatkami. [Zdegradowano: hook i payoff sa powiazane ze zrodlem oraz krokami scenariusza.]",
+      "suggestedFix": "Usuniecie dodatk\u00F3w z hooka: \u0027Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia\u0027 (zamiana na \u0027Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia\u0027)"
+    },
+    {
+      "severity": "info",
+      "segment": "scenes",
+      "code": "noNewInformation",
+      "message": "Scena 01 nie wnosi nowej informacji w stosunku do poprzednich scen. Wszystkie kroki s\u0105 ju\u017C opisane w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usuniecie sceny 01, poniewa\u017C krok \u0027Chaos po rozpoczeciu dnia\u0027 jest ju\u017C zdefiniowany w analizie zrodla jako F1."
+    },
+    {
+      "severity": "info",
+      "segment": "scenes",
+      "code": "noNewInformation",
+      "message": "Scena 02 nie wnosi nowej informacji w stosunku do poprzednich scen. Wszystkie kroki s\u0105 ju\u017C opisane w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usuniecie sceny 02, poniewa\u017C krok \u0027Wybierz jedna czynnosc bez ekranu\u0027 jest ju\u017C zdefiniowany w analizie zrodla jako F2."
+    },
+    {
+      "severity": "info",
+      "segment": "scenes",
+      "code": "noNewInformation",
+      "message": "Scena 03 nie wnosi nowej informacji w stosunku do poprzednich scen. Wszystkie kroki s\u0105 ju\u017C opisane w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usuniecie sceny 03, poniewa\u017C krok \u0027Odloz telefon poza zasieg reki\u0027 jest ju\u017C zdefiniowany w analizie zrodla jako F3."
+    },
+    {
+      "severity": "info",
+      "segment": "scenes",
+      "code": "noNewInformation",
+      "message": "Scena 04 nie wnosi nowej informacji w stosunku do poprzednich scen. Wszystkie kroki s\u0105 ju\u017C opisane w analizie zrodla. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Usuniecie sceny 04, poniewa\u017C krok \u0027Przygotuj jedna rzecz na rano\u0027 jest ju\u017C zdefiniowany w analizie zrodla jako F4."
+    }
+  ],
+  "repetitionCheck": "Brak powt\u00F3rze\u0144 semantycznych w scenariuszu.",
+  "obviousAdviceCheck": "Brak oczywistych porad bez warto\u015Bci w scenariuszu.",
+  "sourceComparison": "Scenariusz jest zgodny z faktami zrodla.",
+  "promiseCheck": "Payoff \u0027Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia.\u0027 nie spe\u0142nia obietnicy hooka, poniewa\u017C hook zawiera dodatkowe informacje, kt\u00F3re nie s\u0105 w mainThesis.",
+  "feasibilityCheck": "Kroki s\u0105 wykonalne dla odbiorcy.",
+  "audienceValueCheck": "Warto\u015B\u0107 dla odbiorcy jest wysoka, poniewa\u017C kroki s\u0105 praktyczne i zgodne z potrzebami.",
+  "suggestedFixes": [
+    "Usuniecie dodatk\u00F3w z hooka",
+    "Usuniecie wszystkich scen, poniewa\u017C ka\u017Cda scena opisuje krok z analizy zrodla, a nie wnosi nowej informacji"
+  ],
+  "usefulnessScore": 7,
+  "approved": true,
+  "hasCriticalErrors": false
+}

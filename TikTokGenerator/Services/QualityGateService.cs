@@ -318,12 +318,15 @@ public static class QualityGateService
 
     private static bool HasPromiseConcern(ContentReview review)
     {
-        if (review.Issues.Any(IsPromiseIssue))
+        var activeIssues = review.Issues
+            .Where(issue => !IsDowngradedReviewIssue(issue))
+            .ToList();
+        if (activeIssues.Any(IsPromiseIssue))
         {
             return true;
         }
 
-        var text = Normalize($"{review.PromiseCheck} {string.Join(" ", review.Issues.Select(issue => $"{issue.Code} {issue.Message}"))}");
+        var text = Normalize($"{review.PromiseCheck} {string.Join(" ", activeIssues.Select(issue => $"{issue.Code} {issue.Message}"))}");
         return text.Contains("not met", StringComparison.OrdinalIgnoreCase)
             || text.Contains("notmet", StringComparison.OrdinalIgnoreCase)
             || text.Contains("nie jest spe", StringComparison.OrdinalIgnoreCase)
@@ -335,7 +338,13 @@ public static class QualityGateService
     {
         return review.Issues.Any(issue =>
             issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase)
+            && !IsDowngradedReviewIssue(issue)
             && IsPromiseIssue(issue));
+    }
+
+    private static bool IsDowngradedReviewIssue(ContentReviewIssue issue)
+    {
+        return issue.Message.Contains("[Zdegradowano:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsPromiseIssue(ContentReviewIssue issue)

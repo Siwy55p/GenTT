@@ -57,6 +57,62 @@ public sealed class ScriptServiceTests
     }
 
     [Fact]
+    public void ApplyVisualPlan_WhenAiNotesPlanUsesPhoneHomeScreen_ReplacesWithTranscriptQueries()
+    {
+        var topic = new SelectedTopic
+        {
+            Title = "Aplikacja AI, ktora robi notatki z nagran",
+            SourceUrl = "offline://test",
+            SourceText = """
+            Praktyczna teza: aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania, ale wynik trzeba sprawdzic.
+            Konkretne kroki: wgraj jedno nagranie lub transkrypcje, popros o liste decyzji i zadan, porownaj wynik z najwazniejszym fragmentem nagrania.
+            """
+        };
+        var script = new ShortScript
+        {
+            Title = topic.Title,
+            Hook = "Gubisz decyzje po nagraniu lub spotkaniu?",
+            Ending = "Sprawdz decyzje i zadania z jednego nagrania.",
+            Scenes =
+            [
+                new ScriptScene
+                {
+                    Role = "action",
+                    VoiceOver = "Popros o liste decyzji i zadan.",
+                    OnScreenText = "Lista decyzji",
+                    SearchPhrase = "person organizing smartphone home screen apps"
+                }
+            ]
+        };
+        var visualPlan = new VisualPlan
+        {
+            GlobalAvoidVisuals = "random selfie",
+            Segments =
+            [
+                new VisualPlanSegment
+                {
+                    SegmentName = "scene_01",
+                    VisibleContent = "Lista decyzji",
+                    PersonAction = "Osoba wpisuje polecenie w aplikacji",
+                    PrimaryObject = "Ekran telefonu",
+                    SearchPhrases =
+                    [
+                        "person organizing smartphone home screen apps",
+                        "close up smartphone productivity app"
+                    ]
+                }
+            ]
+        };
+        var service = new ScriptService(new HttpClient());
+
+        var result = service.ApplyVisualPlan(script, visualPlan, topic);
+
+        Assert.Contains(result.Scenes[0].SearchPhrases, phrase => phrase.Contains("meeting notes", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(result.Scenes[0].SearchPhrases, phrase => phrase.Contains("home screen apps", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("food delivery app", result.Scenes[0].AvoidVisuals, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ParseScriptOrFallback_WhenJsonIsTruncated_DoesNotThrowAndKeepsUsableScenes()
     {
         var topic = CreateTopic();

@@ -1,0 +1,47 @@
+{
+  "issues": [
+    {
+      "severity": "warning",
+      "segment": "hook",
+      "code": "hookDoesNotMatchThesis",
+      "message": "Hook \u0027Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia d: wybierz je.\u0027 nie pasuje do tezy zrodla \u0027spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia d: wybierz jedna czynnosc bez ekranu\u0027. W hooku brakuje kluczowego elementu \u0027jedna czynnosc bez ekranu\u0027 i jest niejasny \u0027wybierz je\u0027 (co to jest?). [Zdegradowano: hook i payoff sa powiazane ze zrodlem oraz krokami scenariusza.]",
+      "suggestedFix": "Zmien hook na: \u0027Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia: wybierz jedn\u0105 czynno\u015B\u0107 bez ekranu?\u0027"
+    },
+    {
+      "severity": "info",
+      "segment": "scene_01",
+      "code": "noNewInformation",
+      "message": "Scena 01 nie wnosi nowej informacji w stosunku do poprzednich scen, poniewa\u017C krok \u0027wybierz jedna czynnosc bez ekranu\u0027 jest ju\u017C w analizie zrodla i nie jest konkretny. Brakuje mechanizmu lub przyk\u0142adu jak wykona\u0107 ten krok. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Dodaj konkretny przyk\u0142ad jak wykona\u0107 krok: np. \u0027Wybierz jedn\u0105 czynno\u015B\u0107, kt\u00F3ra nie wymaga ekranu, np. przygotowanie jednego kawa\u0142ka papieru na rano.\u0027"
+    },
+    {
+      "severity": "info",
+      "segment": "scene_02",
+      "code": "noNewInformation",
+      "message": "Scena 02 nie wnosi nowej informacji w stosunku do poprzednich scen, poniewa\u017C krok \u0027odloz telefon poza zasieg reki\u0027 jest ju\u017C w analizie zrodla i nie jest konkretny. Brakuje mechanizmu lub przyk\u0142adu jak wykona\u0107 ten krok. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Dodaj konkretny przyk\u0142ad jak wykona\u0107 krok: np. \u0027Odloz telefon na sto\u0142, aby nie bylo go w zasiegu r\u0119ki.\u0027"
+    },
+    {
+      "severity": "info",
+      "segment": "scene_03",
+      "code": "noNewInformation",
+      "message": "Scena 03 nie wnosi nowej informacji w stosunku do poprzednich scen, poniewa\u017C krok \u0027przygotuj jedna rzecz na rano\u0027 jest ju\u017C w analizie zrodla i nie jest konkretny. Brakuje mechanizmu lub przyk\u0142adu jak wykona\u0107 ten krok. [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]",
+      "suggestedFix": "Dodaj konkretny przyk\u0142ad jak wykona\u0107 krok: np. \u0027Przygotuj jedn\u0105 rzecz na rano, np. jedno pismo lub jedna kawa\u0142ek papieru.\u0027"
+    }
+  ],
+  "repetitionCheck": "Brak powt\u00F3rze\u0144 semantycznych w scenariuszu.",
+  "obviousAdviceCheck": "Brak oczywistych porad bez warto\u015Bci w scenariuszu.",
+  "sourceComparison": "Sceny zgodne z faktami zrodla, ale brakuje konkretnych przyk\u0142ad\u00F3w jak wykona\u0107 kroki.",
+  "promiseCheck": "Payoff \u0027Wybierz jedna czynnosc bez ekranu, odloz telefon poza zasieg reki i przygotuj jedna rzecz na rano\u0027 nie spenia obietnicy hooka, poniewa\u017C hook sugeruje \u0027wybierz je\u0027 bez wyja\u015Bnienia co to jest.",
+  "feasibilityCheck": "Kroki s\u0105 wykonalne, ale brakuje konkretnych przyk\u0142ad\u00F3w jak je wykona\u0107.",
+  "audienceValueCheck": "Warto\u015B\u0107 dla odbiorcy jest niska, poniewa\u017C brakuje konkretnych przyk\u0142ad\u00F3w jak wykona\u0107 kroki.",
+  "suggestedFixes": [
+    "Zmien hook na: \u0027Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia: wybierz jedn\u0105 czynno\u015B\u0107 bez ekranu?\u0027",
+    "Dodaj konkretny przyk\u0142ad dla ka\u017Cdego kroku: np. \u0027Wybierz jedn\u0105 czynno\u015B\u0107, kt\u00F3ra nie wymaga ekranu, np. przygotowanie jednego kawa\u0142ka papieru na rano.\u0027",
+    "Dodaj konkretny przyk\u0142ad dla ka\u017Cdego kroku: np. \u0027Odloz telefon na sto\u0142, aby nie bylo go w zasiegu r\u0119ki.\u0027",
+    "Dodaj konkretny przyk\u0142ad dla ka\u017Cdego kroku: np. \u0027Przygotuj jedn\u0105 rzecz na rano, np. jedno pismo lub jedna kawa\u0142ek papieru.\u0027"
+  ],
+  "usefulnessScore": 7,
+  "approved": true,
+  "hasCriticalErrors": false
+}

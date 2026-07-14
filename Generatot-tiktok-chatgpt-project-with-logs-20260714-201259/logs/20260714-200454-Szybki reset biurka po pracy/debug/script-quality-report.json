@@ -1,0 +1,102 @@
+{
+  "issues": [
+    {
+      "severity": "info",
+      "segment": "scene_01",
+      "code": "generated_visual_description",
+      "message": "Brakowalo opisu wizualnego, wiec zbudowano go z tresci sceny.",
+      "originalValue": "",
+      "fixedValue": "Osoba wykonuje praktyczny krok opisany w lektorze: Po pracy biurko wygl\u0105da jak po wojnie."
+    },
+    {
+      "severity": "warning",
+      "segment": "scene_01",
+      "code": "missing_search_phrase",
+      "message": "Fraza Pexels byla pusta, generyczna albo nieangielska. Zastapiono ja konkretniejsza fraza.",
+      "originalValue": "",
+      "fixedValue": "person organizing desk after work"
+    },
+    {
+      "severity": "info",
+      "segment": "scene_02",
+      "code": "generated_visual_description",
+      "message": "Brakowalo opisu wizualnego, wiec zbudowano go z tresci sceny.",
+      "originalValue": "",
+      "fixedValue": "Osoba wykonuje praktyczny krok opisany w lektorze: Najpierw wyrzu\u0107 smieci."
+    },
+    {
+      "severity": "warning",
+      "segment": "scene_02",
+      "code": "missing_search_phrase",
+      "message": "Fraza Pexels byla pusta, generyczna albo nieangielska. Zastapiono ja konkretniejsza fraza.",
+      "originalValue": "",
+      "fixedValue": "person planning task in notebook at desk"
+    },
+    {
+      "severity": "info",
+      "segment": "scene_03",
+      "code": "generated_visual_description",
+      "message": "Brakowalo opisu wizualnego, wiec zbudowano go z tresci sceny.",
+      "originalValue": "",
+      "fixedValue": "Osoba wykonuje praktyczny krok opisany w lektorze: Potem odloz rzeczy na miejsce."
+    },
+    {
+      "severity": "warning",
+      "segment": "scene_03",
+      "code": "missing_search_phrase",
+      "message": "Fraza Pexels byla pusta, generyczna albo nieangielska. Zastapiono ja konkretniejsza fraza.",
+      "originalValue": "",
+      "fixedValue": "person planning task in notebook at desk"
+    },
+    {
+      "severity": "info",
+      "segment": "scene_04",
+      "code": "generated_visual_description",
+      "message": "Brakowalo opisu wizualnego, wiec zbudowano go z tresci sceny.",
+      "originalValue": "",
+      "fixedValue": "Osoba wykonuje praktyczny krok opisany w lektorze: I zostaw jedn\u0105 kartk\u0119 z pierwszym zadaniem na jutro."
+    },
+    {
+      "severity": "warning",
+      "segment": "scene_04",
+      "code": "missing_search_phrase",
+      "message": "Fraza Pexels byla pusta, generyczna albo nieangielska. Zastapiono ja konkretniejsza fraza.",
+      "originalValue": "",
+      "fixedValue": "person writing daily plan in notebook"
+    },
+    {
+      "severity": "info",
+      "segment": "scene_05",
+      "code": "generated_visual_description",
+      "message": "Brakowalo opisu wizualnego, wiec zbudowano go z tresci sceny.",
+      "originalValue": "",
+      "fixedValue": "Osoba wykonuje praktyczny krok opisany w lektorze: Zostawienie biurka gotowego na kolejny start w 25 sekund."
+    },
+    {
+      "severity": "warning",
+      "segment": "scene_05",
+      "code": "missing_search_phrase",
+      "message": "Fraza Pexels byla pusta, generyczna albo nieangielska. Zastapiono ja konkretniejsza fraza.",
+      "originalValue": "",
+      "fixedValue": "person organizing desk after work"
+    },
+    {
+      "severity": "info",
+      "segment": "hook",
+      "code": "generated_segment_search_phrase",
+      "message": "Brakowalo osobnej frazy wizualnej dla hooka albo zakonczenia, wiec dobrano konkretna fraze.",
+      "originalValue": "",
+      "fixedValue": "person organizing desk after work"
+    },
+    {
+      "severity": "info",
+      "segment": "ending",
+      "code": "generated_segment_search_phrase",
+      "message": "Brakowalo osobnej frazy wizualnej dla hooka albo zakonczenia, wiec dobrano konkretna fraze.",
+      "originalValue": "",
+      "fixedValue": "person organizing desk after work"
+    }
+  ],
+  "hasBlockingIssues": false,
+  "hasWarnings": true
+}

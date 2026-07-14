@@ -1,0 +1,84 @@
+{
+  "title": "Jedna rzecz, kt\u00F3ra poprawia sen",
+  "selectedConceptId": "D3",
+  "hook": "Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia.",
+  "hookOnScreenText": "Spokojniejszy wieczor latwiej zaczac od jednego malego",
+  "hookSearchPhrase": "calm evening routine bedroom notebook",
+  "scenes": [
+    {
+      "role": "problem",
+      "voiceOver": "Rozpoczynasz dzie\u0144 z chaosem na ekranie.",
+      "sourceFactIds": [
+        "F1"
+      ],
+      "newInformation": "Chaos po rozpoczeciu dnia",
+      "onScreenEmphasis": "Chaos na ekranie",
+      "estimatedWords": 5,
+      "onScreenText": "Chaos na ekranie",
+      "visualDescription": "Osoba wykonuje praktyczny krok opisany w lektorze: Rozpoczynasz dzie\u0144 z chaosem na ekranie.",
+      "searchPhrase": "calm evening routine bedroom notebook",
+      "searchPhrases": [
+        "calm evening routine bedroom notebook"
+      ],
+      "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+      "sceneGoal": "Zdefiniowanie problemu"
+    },
+    {
+      "role": "mechanism",
+      "voiceOver": "Wybierz jedna czynnosc bez ekranu.",
+      "sourceFactIds": [
+        "F2"
+      ],
+      "newInformation": "Wybierz jedna czynnosc bez ekranu",
+      "onScreenEmphasis": "Wybierz czynnosc bez ekranu",
+      "estimatedWords": 4,
+      "onScreenText": "Wybierz czynnosc bez ekranu",
+      "visualDescription": "Osoba wykonuje praktyczny krok opisany w lektorze: Wybierz jedna czynnosc bez ekranu.",
+      "searchPhrase": "calm evening routine bedroom notebook",
+      "searchPhrases": [
+        "calm evening routine bedroom notebook"
+      ],
+      "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+      "sceneGoal": "Zdefiniowanie mechanizmu"
+    },
+    {
+      "role": "action",
+      "voiceOver": "Odloz telefon poza zasieg reki.",
+      "sourceFactIds": [
+        "F3"
+      ],
+      "newInformation": "Odloz telefon poza zasieg reki",
+      "onScreenEmphasis": "Odloz telefon poza zasieg reki",
+      "estimatedWords": 4,
+      "onScreenText": "Odloz telefon poza zasieg reki",
+      "visualDescription": "Osoba wykonuje praktyczny krok opisany w lektorze: Odloz telefon poza zasieg reki.",
+      "searchPhrase": "close up smartphone productivity app",
+      "searchPhrases": [
+        "close up smartphone productivity app"
+      ],
+      "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+      "sceneGoal": "Zdefiniowanie akcji"
+    },
+    {
+      "role": "proof",
+      "voiceOver": "Przygotuj jedna rzecz na rano.",
+      "sourceFactIds": [
+        "F4"
+      ],
+      "newInformation": "Przygotuj jedna rzecz na rano",
+      "onScreenEmphasis": "Przygotuj jedna rzecz na rano",
+      "estimatedWords": 4,
+      "onScreenText": "Przygotuj jedna rzecz na rano",
+      "visualDescription": "Osoba wykonuje praktyczny krok opisany w lektorze: Przygotuj jedna rzecz na rano.",
+      "searchPhrase": "calm evening routine bedroom notebook",
+      "searchPhrases": [
+        "calm evening routine bedroom notebook"
+      ],
+      "avoidVisuals": "generic social media recording, unrelated beauty routine, random phone selfie",
+      "sceneGoal": "Zdefiniowanie dowodu"
+    }
+  ],
+  "ending": "Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia.",
+  "endingOnScreenText": "Spokojniejszy wieczor latwiej zaczac od jednego malego",
+  "endingSearchPhrase": "calm evening routine bedroom notebook"
+}

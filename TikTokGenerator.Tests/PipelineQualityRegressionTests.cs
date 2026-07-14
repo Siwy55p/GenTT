@@ -202,6 +202,49 @@ public sealed class PipelineQualityRegressionTests
     }
 
     [Fact]
+    public void EvaluateBeforeRender_WhenAiNotesReviewWasDowngraded_PassesQualityGate()
+    {
+        var topic = CreateAiNotesTopic();
+        var analysis = CreateAiNotesAnalysis();
+        var script = CreateAiNotesScript();
+        var review = new ContentReview
+        {
+            Approved = true,
+            UsefulnessScore = 7,
+            AudienceValueCheck = "Daje odbiorcy konkretne kroki do sprawdzenia decyzji i zadan po nagraniu.",
+            PromiseCheck = "Obietnica hooka nie jest spelniona, bo kroki wymagaja manualnego sprawdzenia.",
+            Issues =
+            [
+                new ContentReviewIssue
+                {
+                    Severity = "warning",
+                    Segment = "hook",
+                    Code = "hookDoesNotMatchPayoff",
+                    Message = "Hook nie jest spelniony przez payoff.",
+                    SuggestedFix = "Dopasuj payoff do hooka."
+                }
+            ]
+        };
+        ScriptService.SanitizeReviewAgainstSource(topic, analysis, script, review);
+
+        var report = QualityGateService.EvaluateBeforeRender(
+            topic,
+            analysis,
+            script,
+            review,
+            CreateAiNotesVisualPlan(),
+            CreateVoiceSegments(script),
+            CreateClips(5));
+
+        Assert.True(report.Passed);
+        Assert.True(report.Score >= report.MinimumScore);
+        Assert.DoesNotContain("nie jest spe", review.PromiseCheck, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(report.Issues, issue => issue.Code == "promise_not_met");
+        Assert.Equal(15, Assert.Single(report.Criteria, criterion => criterion.Name == "Konkretnosc i wykonalnosc").Points);
+        Assert.True(Assert.Single(report.Criteria, criterion => criterion.Name == "Hook zgodny z payoffem").Points > 3);
+    }
+
+    [Fact]
     public void EvaluateBeforeRender_WhenSourceAnalysisContainsUnsupportedExample_BlocksRender()
     {
         var topic = CreateMorningTopic();
@@ -342,6 +385,104 @@ public sealed class PipelineQualityRegressionTests
         };
     }
 
+    private static SelectedTopic CreateAiNotesTopic()
+    {
+        return new SelectedTopic
+        {
+            Title = "Aplikacja AI, ktora robi notatki z nagran",
+            SourceUrl = "offline://test",
+            SourceText = """
+            Praktyczna teza: aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania, ale wynik trzeba sprawdzic.
+            Konkretne kroki: wgraj jedno nagranie lub transkrypcje, popros o liste decyzji i zadan, porownaj wynik z najwazniejszym fragmentem nagrania.
+            Korzysc dla widza: widz dostaje sposob na szybki przeglad spotkania bez zaufania w ciemno.
+            """,
+            Brief = new ContentBrief
+            {
+                Audience = "osoby uczestniczace w spotkaniach",
+                ViewerProblem = "trudno szybko znalezc decyzje i zadania po nagraniu",
+                DesiredOutcome = "sprawdzic najwazniejsze decyzje i zadania",
+                DurationSeconds = 25
+            }
+        };
+    }
+
+    private static SourceAnalysis CreateAiNotesAnalysis()
+    {
+        return new SourceAnalysis
+        {
+            MainThesis = "Aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania, ale wynik trzeba sprawdzic.",
+            Facts =
+            [
+                new SourceFact { Id = "F1", Text = "Aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania.", Evidence = "aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania" },
+                new SourceFact { Id = "F2", Text = "Wynik trzeba sprawdzic.", Evidence = "wynik trzeba sprawdzic" }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "Wgraj jedno nagranie lub transkrypcje", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S2", Text = "Popros o liste decyzji i zadan", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S3", Text = "Porownaj wynik z najwazniejszym fragmentem nagrania", SourceFactIds = ["F2"] }
+            ],
+            MostUsefulFragment = "Wgraj jedno nagranie lub transkrypcje, popros o liste decyzji i zadan, porownaj wynik z najwazniejszym fragmentem nagrania."
+        };
+    }
+
+    private static ShortScript CreateAiNotesScript()
+    {
+        return new ShortScript
+        {
+            Title = "Szybki przeglad decyzji po nagraniu",
+            Hook = "Gubisz decyzje po nagraniu lub spotkaniu?",
+            HookOnScreenText = "Gubisz decyzje",
+            HookSearchPhrase = "person reviewing meeting transcript on laptop",
+            Ending = "Wgraj jedno nagranie, popros o liste decyzji i porownaj wynik z fragmentem nagrania.",
+            EndingOnScreenText = "Sprawdz decyzje",
+            EndingSearchPhrase = "person checking meeting transcript and notes on laptop",
+            Scenes =
+            [
+                CreateAiNotesScene("Wgraj jedno nagranie lub transkrypcje.", "Wgraj nagranie"),
+                CreateAiNotesScene("Popros o liste decyzji i zadan.", "Lista decyzji"),
+                CreateAiNotesScene("Porownaj wynik z najwazniejszym fragmentem nagrania.", "Porownaj wynik")
+            ]
+        };
+    }
+
+    private static ScriptScene CreateAiNotesScene(string voiceOver, string onScreenText)
+    {
+        return new ScriptScene
+        {
+            Role = "action",
+            VoiceOver = voiceOver,
+            SourceFactIds = ["F1"],
+            NewInformation = voiceOver,
+            OnScreenText = onScreenText,
+            VisualDescription = "Osoba sprawdza transkrypcje spotkania na laptopie.",
+            SearchPhrase = "person reviewing meeting transcript on laptop",
+            SearchPhrases = ["person reviewing meeting transcript on laptop"],
+            AvoidVisuals = "food delivery app, smartphone home screen",
+            SceneGoal = "Pokazac krok z nagraniem."
+        };
+    }
+
+    private static VisualPlan CreateAiNotesVisualPlan()
+    {
+        return new VisualPlan
+        {
+            GlobalAvoidVisuals = "food delivery app, smartphone home screen",
+            Segments =
+            [
+                new VisualPlanSegment
+                {
+                    SegmentName = "scene_01",
+                    VisibleContent = "Transkrypcja spotkania",
+                    PersonAction = "Osoba przeglada transkrypcje",
+                    PrimaryObject = "laptop",
+                    ResultToShow = "Widoczna lista decyzji",
+                    SearchPhrases = ["person reviewing meeting transcript on laptop"]
+                }
+            ]
+        };
+    }
+
     private static SourceAnalysis CreateMorningAnalysis()
     {
         return new SourceAnalysis
@@ -479,13 +620,14 @@ public sealed class PipelineQualityRegressionTests
 
     private static IReadOnlyList<DownloadedVideoClip> CreateClips()
     {
-        return
-        [
-            CreateClip(0),
-            CreateClip(1),
-            CreateClip(2),
-            CreateClip(3)
-        ];
+        return CreateClips(4);
+    }
+
+    private static IReadOnlyList<DownloadedVideoClip> CreateClips(int count)
+    {
+        return Enumerable.Range(0, count)
+            .Select(CreateClip)
+            .ToList();
     }
 
     private static DownloadedVideoClip CreateClip(int segmentIndex)

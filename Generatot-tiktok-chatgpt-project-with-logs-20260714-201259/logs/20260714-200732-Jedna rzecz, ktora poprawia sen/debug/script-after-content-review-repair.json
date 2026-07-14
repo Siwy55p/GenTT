@@ -1,0 +1,67 @@
+{
+  "title": "Jedna rzecz, kt\u00F3ra poprawia sen",
+  "selectedConceptId": "D3",
+  "hook": "Spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia d: wybierz je.?",
+  "hookOnScreenText": "Spokojniejszy wieczor latwiej zaczac od",
+  "hookSearchPhrase": "close up smartphone productivity app",
+  "scenes": [
+    {
+      "role": "action",
+      "voiceOver": "Wybierz jedna czynnosc bez ekranu.",
+      "sourceFactIds": [
+        "F2"
+      ],
+      "newInformation": "Krok ze zrodla: jedna czynnosc bez ekranu.",
+      "onScreenEmphasis": "Wybierz jedna czynnosc bez ekranu",
+      "estimatedWords": 5,
+      "onScreenText": "Wybierz jedna czynnosc bez ekranu",
+      "visualDescription": "Osoba wykonuje krok ze zrodla: Wybierz jedna czynnosc bez ekranu.",
+      "searchPhrase": "calm evening routine bedroom notebook",
+      "searchPhrases": [
+        "calm evening routine bedroom notebook"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "sceneGoal": "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+    },
+    {
+      "role": "action",
+      "voiceOver": "Odloz telefon poza zasieg reki.",
+      "sourceFactIds": [
+        "F3"
+      ],
+      "newInformation": "Krok ze zrodla: odloz telefon poza zasieg reki.",
+      "onScreenEmphasis": "Odloz telefon poza zasieg reki",
+      "estimatedWords": 5,
+      "onScreenText": "Odloz telefon poza zasieg reki",
+      "visualDescription": "Osoba wykonuje krok ze zrodla: Odloz telefon poza zasieg reki.",
+      "searchPhrase": "person organizing desk after work",
+      "searchPhrases": [
+        "person organizing desk after work",
+        "close up smartphone productivity app"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "sceneGoal": "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+    },
+    {
+      "role": "action",
+      "voiceOver": "Przygotuj jedna rzecz na rano.",
+      "sourceFactIds": [
+        "F4"
+      ],
+      "newInformation": "Krok ze zrodla: przygotuj jedna rzecz na rano.",
+      "onScreenEmphasis": "Przygotuj jedna rzecz na rano",
+      "estimatedWords": 5,
+      "onScreenText": "Przygotuj jedna rzecz na rano",
+      "visualDescription": "Osoba wykonuje krok ze zrodla: Przygotuj jedna rzecz na rano.",
+      "searchPhrase": "calm evening routine bedroom notebook",
+      "searchPhrases": [
+        "calm evening routine bedroom notebook"
+      ],
+      "avoidVisuals": "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+      "sceneGoal": "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+    }
+  ],
+  "ending": "Wybierz jedna czynnosc bez ekranu, odloz telefon poza zasieg reki i przygotuj jedna rzecz na rano.",
+  "endingOnScreenText": "Wybierz jedna czynnosc bez ekranu, odloz",
+  "endingSearchPhrase": "calm evening routine bedroom notebook"
+}
