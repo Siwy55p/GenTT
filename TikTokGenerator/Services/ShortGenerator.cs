@@ -35,47 +35,66 @@ public sealed class ShortGenerator
     {
         var projectDirectory = CreateProjectDirectory(topic.Title);
         Directory.CreateDirectory(projectDirectory);
+        var logger = new GenerationDebugLogger(projectDirectory);
 
-        progress?.Report(new ShortGenerationProgress(5, "Tworze scenariusz w Ollama"));
-        var script = await _scriptService.GenerateScriptAsync(topic, options, cancellationToken);
-        await SaveJsonAsync(Path.Combine(projectDirectory, "script.json"), script, cancellationToken);
+        try
+        {
+            logger.Info($"Started generation. ProjectDirectory={projectDirectory}");
+            await logger.SaveJsonAsync("topic.json", topic, cancellationToken);
 
-        progress?.Report(new ShortGenerationProgress(25, "Tworze lektora w Piper"));
-        var audioDirectory = Path.Combine(projectDirectory, "audio");
-        var voiceSegments = await _voiceService.GenerateVoiceAsync(script, audioDirectory, options, cancellationToken);
+            progress?.Report(new ShortGenerationProgress(5, "Tworze scenariusz w Ollama"));
+            var script = await _scriptService.GenerateScriptAsync(topic, options, logger, cancellationToken);
+            await SaveJsonAsync(Path.Combine(projectDirectory, "script.json"), script, cancellationToken);
+            await logger.SaveJsonAsync("script-normalized.json", script, cancellationToken);
 
-        progress?.Report(new ShortGenerationProgress(45, "Pobieram klipy z Pexels"));
-        var videoDirectory = Path.Combine(projectDirectory, "videos");
-        var clips = await _stockVideoService.DownloadVideosAsync(
-            voiceSegments,
-            videoDirectory,
-            options,
-            progress,
-            cancellationToken);
+            progress?.Report(new ShortGenerationProgress(25, "Tworze lektora w Piper"));
+            var audioDirectory = Path.Combine(projectDirectory, "audio");
+            var voiceSegments = await _voiceService.GenerateVoiceAsync(script, audioDirectory, options, logger, cancellationToken);
+            await logger.SaveJsonAsync("voice-segments.json", voiceSegments, cancellationToken);
 
-        progress?.Report(new ShortGenerationProgress(70, "Montuje film w FFmpeg"));
-        var outputPath = await _videoService.RenderVideoAsync(
-            script,
-            voiceSegments,
-            clips,
-            projectDirectory,
-            progress,
-            cancellationToken);
+            progress?.Report(new ShortGenerationProgress(45, "Pobieram klipy z Pexels"));
+            var videoDirectory = Path.Combine(projectDirectory, "videos");
+            var clips = await _stockVideoService.DownloadVideosAsync(
+                voiceSegments,
+                videoDirectory,
+                options,
+                progress,
+                logger,
+                cancellationToken);
+            await logger.SaveJsonAsync("pexels-clips.json", clips, cancellationToken);
 
-        await SaveJsonAsync(
-            Path.Combine(projectDirectory, "project.json"),
-            new
-            {
-                topic,
+            progress?.Report(new ShortGenerationProgress(70, "Montuje film w FFmpeg"));
+            var outputPath = await _videoService.RenderVideoAsync(
                 script,
                 voiceSegments,
                 clips,
-                outputPath,
-                createdAt = DateTimeOffset.Now
-            },
-            cancellationToken);
+                projectDirectory,
+                progress,
+                logger,
+                cancellationToken);
 
-        return outputPath;
+            await SaveJsonAsync(
+                Path.Combine(projectDirectory, "project.json"),
+                new
+                {
+                    topic,
+                    script,
+                    voiceSegments,
+                    clips,
+                    outputPath,
+                    debugLogPath = logger.LogPath,
+                    createdAt = DateTimeOffset.Now
+                },
+                cancellationToken);
+
+            logger.Info($"Generation finished. OutputPath={outputPath}");
+            return outputPath;
+        }
+        catch (Exception ex)
+        {
+            logger.Error("Generation failed.", ex);
+            throw new InvalidOperationException($"{ex.Message}{Environment.NewLine}{Environment.NewLine}Debug log:{Environment.NewLine}{logger.LogPath}", ex);
+        }
     }
 
     private static async Task SaveJsonAsync<T>(

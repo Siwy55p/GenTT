@@ -24,6 +24,36 @@ dotnet run --project .\TikTokGenerator\TikTokGenerator.csproj
 
 Mozesz tez otworzyc `TikTokGenerator.slnx` w Visual Studio.
 
+## Testy
+
+```powershell
+dotnet test TikTokGenerator.slnx
+```
+
+Testy sprawdzaja miedzy innymi parser odpowiedzi Ollamy. Jesli model zwroci ucity albo niepoprawny JSON, aplikacja nie powinna przerywac generowania tylko zapisac debug i zbudowac bezpieczny scenariusz fallbackowy z materialu zrodlowego.
+
+## Debug
+
+Kazde generowanie tworzy osobny katalog w `Output`. W nim znajduje sie folder:
+
+```text
+debug/
+```
+
+Najwazniejsze pliki:
+
+```text
+debug/debug.log
+debug/ollama-http-response.json
+debug/ollama-script-raw.txt
+debug/script-normalized.json
+debug/voice-segments.json
+debug/pexels-clips.json
+debug/pexels-search-*.json
+```
+
+Jesli generowanie zakonczy sie bledem, okno programu pokaze sciezke do `debug.log`.
+
 ## Wymagane narzedzia
 
 ### FFmpeg

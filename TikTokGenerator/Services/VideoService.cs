@@ -15,12 +15,14 @@ public sealed class VideoService
         IReadOnlyList<DownloadedVideoClip> clips,
         string projectDirectory,
         IProgress<ShortGenerationProgress>? progress = null,
+        GenerationDebugLogger? logger = null,
         CancellationToken cancellationToken = default)
     {
         var ffmpegPath = ToolLocator.FindFfmpeg()
             ?? throw new FileNotFoundException("Nie znaleziono FFmpeg. Dodaj ffmpeg.exe do Tools albo zainstaluj FFmpeg w PATH.");
 
         Directory.CreateDirectory(projectDirectory);
+        logger?.Info($"Rendering video with FFmpeg={ffmpegPath}; segments={voiceSegments.Count}; clips={clips.Count}");
         var subtitleDirectory = Path.Combine(projectDirectory, "subtitles");
         var segmentDirectory = Path.Combine(projectDirectory, "segments");
         Directory.CreateDirectory(subtitleDirectory);
@@ -40,8 +42,10 @@ public sealed class VideoService
 
             var subtitlePath = Path.Combine(subtitleDirectory, $"{segment.Index:00}_{segment.Name}.png");
             CreateSubtitleImage(segment.Text, subtitlePath);
+            logger?.Info($"Created subtitle image segment={segment.Index} path={subtitlePath}");
 
             var segmentPath = Path.Combine(segmentDirectory, $"{segment.Index:00}_{segment.Name}.mp4");
+            logger?.Info($"Rendering segment={segment.Index} duration={segment.Duration.TotalSeconds:0.###}s clip={clip.FilePath} audio={segment.AudioPath}");
             await RenderSegmentAsync(
                 ffmpegPath,
                 clip.FilePath,
@@ -52,11 +56,13 @@ public sealed class VideoService
                 cancellationToken);
 
             segmentPaths.Add(segmentPath);
+            logger?.Info($"Rendered segment={segment.Index} path={segmentPath}");
         }
 
         progress?.Report(new ShortGenerationProgress(92, "Lacze segmenty"));
         var outputPath = Path.Combine(projectDirectory, "short.mp4");
         await ConcatSegmentsAsync(ffmpegPath, segmentPaths, outputPath, cancellationToken);
+        logger?.Info($"Concatenated final video path={outputPath}");
 
         progress?.Report(new ShortGenerationProgress(96, "Zapisuje metadane"));
         await SaveCreditsAsync(script, clips, projectDirectory, cancellationToken);

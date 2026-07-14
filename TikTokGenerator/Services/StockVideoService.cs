@@ -23,10 +23,12 @@ public sealed class StockVideoService
         string outputDirectory,
         ShortGeneratorOptions options,
         IProgress<ShortGenerationProgress>? progress = null,
+        GenerationDebugLogger? logger = null,
         CancellationToken cancellationToken = default)
     {
         var apiKey = ResolvePexelsApiKey(options);
         Directory.CreateDirectory(outputDirectory);
+        logger?.Info($"Downloading Pexels videos. Segments={segments.Count}; OutputDirectory={outputDirectory}");
 
         var clips = new List<DownloadedVideoClip>();
 
@@ -37,15 +39,17 @@ public sealed class StockVideoService
                 45 + i * 15 / Math.Max(segments.Count, 1),
                 $"Pobieram klip Pexels: {segment.SearchPhrase}"));
 
-            var video = await SearchVideoAsync(apiKey, segment.SearchPhrase, cancellationToken);
+            var video = await SearchVideoAsync(apiKey, segment.SearchPhrase, $"pexels-search-{segment.Index:00}.json", logger, cancellationToken);
             var videoFile = SelectBestVideoFile(video)
                 ?? throw new InvalidOperationException($"Pexels nie zwrocil pliku MP4 dla frazy: {segment.SearchPhrase}");
+            logger?.Info($"Selected Pexels video segment={segment.Index} phrase={segment.SearchPhrase} url={video.Url} file={videoFile.Link}");
 
             var filePath = Path.Combine(
                 outputDirectory,
                 $"{segment.Index:00}_{SanitizeFileName(segment.SearchPhrase)}.mp4");
 
             await DownloadFileAsync(apiKey, videoFile.Link, filePath, cancellationToken);
+            logger?.Info($"Downloaded Pexels clip segment={segment.Index} path={filePath}");
 
             clips.Add(new DownloadedVideoClip
             {
@@ -82,6 +86,8 @@ public sealed class StockVideoService
     private async Task<PexelsVideo> SearchVideoAsync(
         string apiKey,
         string query,
+        string debugFileName,
+        GenerationDebugLogger? logger,
         CancellationToken cancellationToken)
     {
         var url =
@@ -96,6 +102,10 @@ public sealed class StockVideoService
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (logger is not null)
+        {
+            await logger.SaveTextAsync(debugFileName, responseBody, cancellationToken);
+        }
 
         if (!response.IsSuccessStatusCode)
         {

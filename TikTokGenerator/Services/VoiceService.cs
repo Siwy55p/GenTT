@@ -10,6 +10,7 @@ public sealed class VoiceService
         ShortScript script,
         string outputDirectory,
         ShortGeneratorOptions options,
+        GenerationDebugLogger? logger = null,
         CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(outputDirectory);
@@ -23,6 +24,8 @@ public sealed class VoiceService
         var ffprobePath = ToolLocator.FindFfprobe()
             ?? throw new FileNotFoundException("Nie znaleziono ffprobe.exe. Zainstaluj FFmpeg albo dodaj ffprobe.exe do Tools.");
 
+        logger?.Info($"Voice tools: Piper={piperPath}; Model={modelPath}; Ffprobe={ffprobePath}");
+
         var rawSegments = CreateRawSegments(script);
         var segments = new List<VoiceSegment>();
 
@@ -31,9 +34,11 @@ public sealed class VoiceService
             var audioPath = Path.Combine(outputDirectory, $"{rawSegment.Index:00}_{rawSegment.Name}.wav");
             var textPath = Path.ChangeExtension(audioPath, ".txt");
             await File.WriteAllTextAsync(textPath, rawSegment.Text, cancellationToken);
+            logger?.Info($"Generating voice segment index={rawSegment.Index} name={rawSegment.Name} textLength={rawSegment.Text.Length}");
 
             await RunPiperAsync(piperPath, modelPath, rawSegment.Text, audioPath, cancellationToken);
             var duration = await GetAudioDurationAsync(ffprobePath, audioPath, cancellationToken);
+            logger?.Info($"Generated voice segment path={audioPath} duration={duration.TotalSeconds:0.###}s");
 
             segments.Add(new VoiceSegment
             {

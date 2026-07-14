@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using TikTokGenerator.Models;
 
 namespace TikTokGenerator.Services;
@@ -22,6 +23,7 @@ public sealed class ScriptService
     public async Task<ShortScript> GenerateScriptAsync(
         SelectedTopic topic,
         ShortGeneratorOptions options,
+        GenerationDebugLogger? logger = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(topic.SourceText))
@@ -39,16 +41,21 @@ public sealed class ScriptService
             options = new
             {
                 temperature = 0.2,
-                num_predict = 900
+                num_predict = 1600
             }
         };
 
         var endpoint = new Uri(new Uri(options.OllamaBaseUrl.TrimEnd('/') + "/"), "api/generate");
+        logger?.Info($"Calling Ollama endpoint={endpoint} model={request.model}");
 
         try
         {
             using var response = await _httpClient.PostAsJsonAsync(endpoint, request, JsonOptions, cancellationToken);
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (logger is not null)
+            {
+                await logger.SaveTextAsync("ollama-http-response.json", responseBody, cancellationToken);
+            }
 
             if (!response.IsSuccessStatusCode)
             {
@@ -58,11 +65,12 @@ public sealed class ScriptService
             var ollamaResponse = JsonSerializer.Deserialize<OllamaGenerateResponse>(responseBody, JsonOptions)
                 ?? throw new InvalidOperationException("Ollama zwrocila pusta odpowiedz.");
 
-            var scriptJson = ExtractJsonObject(ollamaResponse.Response);
-            var script = JsonSerializer.Deserialize<ShortScript>(scriptJson, JsonOptions)
-                ?? throw new InvalidOperationException("Nie udalo sie odczytac scenariusza JSON z odpowiedzi Ollamy.");
+            if (logger is not null)
+            {
+                await logger.SaveTextAsync("ollama-script-raw.txt", ollamaResponse.Response, cancellationToken);
+            }
 
-            NormalizeScript(script, topic);
+            var script = ParseScriptOrFallback(ollamaResponse.Response, topic, logger);
             return script;
         }
         catch (HttpRequestException ex)
@@ -71,6 +79,51 @@ public sealed class ScriptService
                 "Nie moge polaczyc sie z Ollama. Uruchom Ollama i wykonaj: ollama pull qwen3:4b",
                 ex);
         }
+    }
+
+    internal static ShortScript ParseScriptOrFallback(
+        string ollamaResponse,
+        SelectedTopic topic,
+        GenerationDebugLogger? logger = null)
+    {
+        if (TryDeserializeScript(ollamaResponse, out var directScript, out var directError))
+        {
+            logger?.Info("Parsed Ollama script directly.");
+            NormalizeScript(directScript, topic);
+            return directScript;
+        }
+
+        if (!string.IsNullOrWhiteSpace(directError))
+        {
+            logger?.Warning($"Direct script parse failed: {directError}");
+        }
+
+        if (TryExtractCompleteJsonObject(ollamaResponse, out var jsonObject))
+        {
+            if (TryDeserializeScript(jsonObject, out var extractedScript, out var extractedError))
+            {
+                logger?.Info("Parsed Ollama script from extracted complete JSON object.");
+                NormalizeScript(extractedScript, topic);
+                return extractedScript;
+            }
+
+            logger?.Warning($"Extracted JSON parse failed: {extractedError}");
+        }
+        else
+        {
+            logger?.Warning("Ollama response did not contain a balanced JSON object.");
+        }
+
+        var looseScript = ParseLooseScript(ollamaResponse);
+        if (HasAnyUsefulContent(looseScript))
+        {
+            logger?.Warning("Using loosely recovered Ollama script because JSON was invalid.");
+            NormalizeScript(looseScript, topic);
+            return looseScript;
+        }
+
+        logger?.Warning("Using fully local fallback script because Ollama JSON was invalid or empty.");
+        return CreateFallbackScript(topic);
     }
 
     private static string CreatePrompt(SelectedTopic topic)
@@ -117,27 +170,158 @@ public sealed class ScriptService
         return sourceText.Length <= maxLength ? sourceText : sourceText[..maxLength];
     }
 
-    private static string ExtractJsonObject(string value)
+    private static bool TryDeserializeScript(
+        string json,
+        out ShortScript script,
+        out string? error)
     {
-        var trimmed = value.Trim();
-        if (trimmed.StartsWith("```", StringComparison.Ordinal))
+        try
         {
-            trimmed = trimmed.Replace("```json", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Replace("```", string.Empty, StringComparison.Ordinal)
-                .Trim();
+            var cleaned = RemoveMarkdownFence(json);
+            script = JsonSerializer.Deserialize<ShortScript>(cleaned, JsonOptions) ?? new ShortScript();
+            error = null;
+            return true;
         }
-
-        var start = trimmed.IndexOf('{');
-        var end = trimmed.LastIndexOf('}');
-        if (start < 0 || end <= start)
+        catch (JsonException ex)
         {
-            throw new InvalidOperationException($"Ollama nie zwrocila obiektu JSON. Odpowiedz: {value}");
+            script = new ShortScript();
+            error = ex.Message;
+            return false;
         }
-
-        return trimmed[start..(end + 1)];
     }
 
-    private static void NormalizeScript(ShortScript script, SelectedTopic topic)
+    private static string RemoveMarkdownFence(string value)
+    {
+        var trimmed = value.Trim();
+        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
+        return trimmed.Replace("```json", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("```", string.Empty, StringComparison.Ordinal)
+            .Trim();
+    }
+
+    internal static bool TryExtractCompleteJsonObject(string value, out string jsonObject)
+    {
+        var trimmed = RemoveMarkdownFence(value);
+        var start = trimmed.IndexOf('{');
+        if (start < 0)
+        {
+            jsonObject = string.Empty;
+            return false;
+        }
+
+        var depth = 0;
+        var inString = false;
+        var escaped = false;
+
+        for (var i = start; i < trimmed.Length; i++)
+        {
+            var ch = trimmed[i];
+
+            if (escaped)
+            {
+                escaped = false;
+                continue;
+            }
+
+            if (ch == '\\' && inString)
+            {
+                escaped = true;
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                inString = !inString;
+                continue;
+            }
+
+            if (inString)
+            {
+                continue;
+            }
+
+            if (ch == '{')
+            {
+                depth++;
+            }
+            else if (ch == '}')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    jsonObject = trimmed[start..(i + 1)];
+                    return true;
+                }
+            }
+        }
+
+        jsonObject = string.Empty;
+        return false;
+    }
+
+    private static ShortScript ParseLooseScript(string value)
+    {
+        return new ShortScript
+        {
+            Title = ReadJsonStringProperty(value, "title"),
+            Hook = ReadJsonStringProperty(value, "hook"),
+            Ending = ReadJsonStringProperty(value, "ending"),
+            Scenes = ReadLooseScenes(value).ToList()
+        };
+    }
+
+    private static string ReadJsonStringProperty(string value, string propertyName)
+    {
+        var match = Regex.Match(
+            value,
+            $"\"{Regex.Escape(propertyName)}\"\\s*:\\s*\"(?<value>(?:\\\\.|[^\"\\\\])*)\"",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        return match.Success ? UnescapeJsonString(match.Groups["value"].Value) : string.Empty;
+    }
+
+    private static IEnumerable<ScriptScene> ReadLooseScenes(string value)
+    {
+        var matches = Regex.Matches(
+            value,
+            "\\{\\s*\"text\"\\s*:\\s*\"(?<text>(?:\\\\.|[^\"\\\\])*)\"\\s*,\\s*\"searchPhrase\"\\s*:\\s*\"(?<search>(?:\\\\.|[^\"\\\\])*)\"\\s*\\}",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        foreach (Match match in matches)
+        {
+            yield return new ScriptScene
+            {
+                Text = UnescapeJsonString(match.Groups["text"].Value),
+                SearchPhrase = UnescapeJsonString(match.Groups["search"].Value)
+            };
+        }
+    }
+
+    private static string UnescapeJsonString(string value)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<string>($"\"{value}\"", JsonOptions) ?? value;
+        }
+        catch
+        {
+            return value;
+        }
+    }
+
+    private static bool HasAnyUsefulContent(ShortScript script)
+    {
+        return !string.IsNullOrWhiteSpace(script.Title)
+            || !string.IsNullOrWhiteSpace(script.Hook)
+            || script.Scenes.Any(scene => !string.IsNullOrWhiteSpace(scene.Text))
+            || !string.IsNullOrWhiteSpace(script.Ending);
+    }
+
+    internal static void NormalizeScript(ShortScript script, SelectedTopic topic)
     {
         script.Title = script.Title.Trim();
         script.Hook = script.Hook.Trim();
@@ -179,6 +363,20 @@ public sealed class ScriptService
         {
             script.Ending = "Warto to sprawdzic samodzielnie, zanim podejmiesz decyzje.";
         }
+    }
+
+    internal static ShortScript CreateFallbackScript(SelectedTopic topic)
+    {
+        var script = new ShortScript
+        {
+            Title = topic.Title,
+            Hook = $"To warto wiedziec: {topic.Title}.",
+            Ending = "Warto to sprawdzic samodzielnie, zanim podejmiesz decyzje."
+        };
+
+        script.Scenes.AddRange(CreateFallbackScenes(topic, 0).Take(3));
+        NormalizeScript(script, topic);
+        return script;
     }
 
     private static IEnumerable<ScriptScene> CreateFallbackScenes(SelectedTopic topic, int existingSceneCount)
