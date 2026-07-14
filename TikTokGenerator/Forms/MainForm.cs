@@ -14,6 +14,7 @@ public partial class MainForm : Form
 
     private readonly TrendService _trendService;
     private readonly ShortGenerator _shortGenerator;
+    private readonly AppSettings _appSettings;
     private readonly BindingSource _trendBindingSource = new();
     private string _lastGeneratedBriefJson = string.Empty;
     private bool _updatingBriefText;
@@ -21,10 +22,12 @@ public partial class MainForm : Form
 
     public MainForm(
         TrendService trendService,
-        ShortGenerator shortGenerator)
+        ShortGenerator shortGenerator,
+        AppSettings appSettings)
     {
         _trendService = trendService;
         _shortGenerator = shortGenerator;
+        _appSettings = appSettings;
 
         InitializeComponent();
         ConfigureControls();
@@ -34,10 +37,8 @@ public partial class MainForm : Form
     {
         countryComboBox.SelectedIndex = 0;
         categoryComboBox.SelectedIndex = 0;
-        pexelsApiKeyTextBox.Text = Environment.GetEnvironmentVariable("PEXELS_API_KEY")
-            ?? Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.User)
-            ?? Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.Machine)
-            ?? string.Empty;
+        pexelsApiKeyTextBox.Text = AppSettingsService.ResolvePexelsApiKey(_appSettings);
+        pixabayApiKeyTextBox.Text = AppSettingsService.ResolvePixabayApiKey(_appSettings);
 
         trendsListBox.DataSource = _trendBindingSource;
         trendsListBox.DisplayMember = nameof(Trend.Title);
@@ -109,10 +110,10 @@ public partial class MainForm : Form
                 Brief = ParseBrief()
             };
 
-            var options = new ShortGeneratorOptions
-            {
-                PexelsApiKey = pexelsApiKeyTextBox.Text.Trim()
-            };
+            var options = AppSettingsService.CreateShortGeneratorOptions(
+                _appSettings,
+                pexelsApiKeyTextBox.Text.Trim(),
+                pixabayApiKeyTextBox.Text.Trim());
 
             progressBar.Value = 0;
             statusLabel.Text = "Startuje generator...";
@@ -268,6 +269,7 @@ public partial class MainForm : Form
         sourceUrlTextBox.Enabled = enabled;
         briefTextBox.Enabled = enabled;
         pexelsApiKeyTextBox.Enabled = enabled;
+        pixabayApiKeyTextBox.Enabled = enabled;
         trendsListBox.Enabled = enabled;
     }
 }

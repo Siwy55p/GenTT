@@ -544,6 +544,128 @@ public sealed class ScriptServiceTests
     }
 
     [Fact]
+    public void RepairScriptAfterReview_WhenScanner3DSourceStepsExist_PreservesEachDistinctStep()
+    {
+        var service = new ScriptService(new HttpClient());
+        var topic = CreateScannerTopic();
+        var analysis = new SourceAnalysis
+        {
+            MainThesis = "telefon moze posluzyc do prostego skanu 3D obiektu",
+            Facts =
+            [
+                new SourceFact
+                {
+                    Id = "F1",
+                    Text = "telefon moze posluzyc do prostego skanu 3D obiektu",
+                    Evidence = "Praktyczna teza: telefon moze posluzyc do prostego skanu 3D obiektu"
+                }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "wybierz maly nieruchomy obiekt z wyrazna faktura", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S2", Text = "obejdz go telefonem z kilku stron", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S3", Text = "sprawdz w aplikacji czy model nie ma brakujacych fragmentow", SourceFactIds = ["F1"] }
+            ],
+            MostUsefulFragment = "widz rozumie, ze skan 3D telefonem zaczyna sie od stabilnego obiektu"
+        };
+        var script = new ShortScript
+        {
+            Title = "Powiadomienia zamiast skanu",
+            Hook = "Jak uporzadkowac powiadomienia?",
+            Ending = "Wylacz powiadomienia.",
+            Scenes =
+            [
+                new ScriptScene { Role = "action", VoiceOver = "Wylacz powiadomienia.", SourceFactIds = ["F1"], NewInformation = "Powiadomienia.", OnScreenText = "Powiadomienia", SearchPhrase = "phone notification settings" }
+            ]
+        };
+        var review = new ContentReview
+        {
+            Approved = false,
+            Issues =
+            [
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "scene_01",
+                    Code = "sourceMismatch",
+                    Message = "Scenariusz odplynal od skanowania 3D.",
+                    SuggestedFix = "Wroc do krokow ze zrodla."
+                }
+            ]
+        };
+
+        var repaired = service.RepairScriptAfterReview(topic, analysis, script, review);
+        var voices = repaired.Scenes.Select(scene => scene.VoiceOver).ToList();
+
+        Assert.Equal(3, repaired.Scenes.Count);
+        Assert.Equal(3, voices.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Contains(voices, voice => voice.Contains("Wybierz maly nieruchomy obiekt", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(voices, voice => voice.Contains("Obejdz obiekt telefonem", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(voices, voice => voice.Contains("Sprawdz w aplikacji", StringComparison.OrdinalIgnoreCase));
+        Assert.All(repaired.Scenes, scene => Assert.NotEmpty(scene.SourceFactIds));
+    }
+
+    [Fact]
+    public void RepairScriptAfterReview_WhenSourceSafeCandidateRepeatsScenes_KeepsValidOriginal()
+    {
+        var service = new ScriptService(new HttpClient());
+        var topic = new SelectedTopic
+        {
+            Title = "Priorytet na kartce",
+            SourceUrl = "offline://test",
+            SourceText = "Praktyczna teza: kartka pomaga zaczac od priorytetu. Konkretne kroki: zapisz priorytet, zapisz priorytet. Uzyj kartki i zostaw ja na biurku."
+        };
+        var analysis = new SourceAnalysis
+        {
+            MainThesis = "kartka pomaga zaczac od priorytetu",
+            Facts =
+            [
+                new SourceFact { Id = "F1", Text = "kartka pomaga zaczac od priorytetu", Evidence = "Praktyczna teza: kartka pomaga zaczac od priorytetu" }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "zapisz priorytet", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S2", Text = "zapisz priorytet", SourceFactIds = ["F1"] }
+            ],
+            MostUsefulFragment = "Uzyj kartki i zostaw ja na biurku"
+        };
+        var script = new ShortScript
+        {
+            Title = "Priorytet na kartce",
+            Hook = "Od czego zaczac?",
+            HookOnScreenText = "Od czego zaczac?",
+            Ending = "Zapisz priorytet i zostaw kartke na biurku.",
+            EndingOnScreenText = "Kartka na biurku",
+            Scenes =
+            [
+                new ScriptScene { Role = "action", VoiceOver = "Zapisz priorytet.", SourceFactIds = ["F1"], NewInformation = "Krok ze zrodla: priorytet.", OnScreenText = "Zapisz priorytet", SearchPhrase = "person writing priority on paper" },
+                new ScriptScene { Role = "proof", VoiceOver = "Zostaw kartke na biurku.", SourceFactIds = ["F1"], NewInformation = "Krok ze zrodla: kartka na biurku.", OnScreenText = "Kartka na biurku", SearchPhrase = "paper note on desk" }
+            ]
+        };
+        var review = new ContentReview
+        {
+            Approved = false,
+            Issues =
+            [
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "scene_01",
+                    Code = "sourceMismatch",
+                    Message = "Wymus rebuild ze zrodla.",
+                    SuggestedFix = "Odtworz kroki."
+                }
+            ]
+        };
+
+        var repaired = service.RepairScriptAfterReview(topic, analysis, script, review);
+
+        Assert.Equal("Priorytet na kartce", repaired.Title);
+        Assert.Contains(repaired.Scenes, scene => scene.VoiceOver.Contains("Zostaw kartke", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(2, repaired.Scenes.Select(scene => scene.NewInformation).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Fact]
     public void SanitizeReviewAgainstSource_WhenReviewerRejectsSourceStepsAsNoNewInformation_ApprovesReview()
     {
         var topic = new SelectedTopic

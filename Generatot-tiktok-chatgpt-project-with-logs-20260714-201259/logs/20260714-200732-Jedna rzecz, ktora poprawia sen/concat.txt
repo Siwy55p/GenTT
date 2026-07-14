@@ -1,5 +1,0 @@
-file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200732-Jedna rzecz, ktora poprawia sen/segments/00_hook.mp4'
-file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200732-Jedna rzecz, ktora poprawia sen/segments/01_scene_01.mp4'
-file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200732-Jedna rzecz, ktora poprawia sen/segments/02_scene_02.mp4'
-file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200732-Jedna rzecz, ktora poprawia sen/segments/03_scene_03.mp4'
-file 'C:/Users/Piotr/Documents/Generatot tiktok/TikTokGenerator/bin/Debug/net10.0-windows/Output/20260714-200732-Jedna rzecz, ktora poprawia sen/segments/04_ending.mp4'

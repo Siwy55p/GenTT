@@ -11,15 +11,15 @@ public sealed class ShortGenerator
     };
 
     private readonly ScriptService _scriptService;
-    private readonly VoiceService _voiceService;
-    private readonly StockVideoService _stockVideoService;
-    private readonly VideoService _videoService;
+    private readonly IVoiceService _voiceService;
+    private readonly IStockVideoService _stockVideoService;
+    private readonly IVideoService _videoService;
 
     public ShortGenerator(
         ScriptService scriptService,
-        VoiceService voiceService,
-        StockVideoService stockVideoService,
-        VideoService videoService)
+        IVoiceService voiceService,
+        IStockVideoService stockVideoService,
+        IVideoService videoService)
     {
         _scriptService = scriptService;
         _voiceService = voiceService;
@@ -40,6 +40,7 @@ public sealed class ShortGenerator
         try
         {
             logger.Info($"Started generation. ProjectDirectory={projectDirectory}");
+            await logger.SaveJsonAsync("runtime-options.json", CreateRuntimeOptionsLog(options), cancellationToken);
             await logger.SaveJsonAsync("topic.json", topic, cancellationToken);
 
             progress?.Report(new ShortGenerationProgress(5, "Analizuje material zrodlowy"));
@@ -50,7 +51,7 @@ public sealed class ShortGenerator
             var conceptSelection = await _scriptService.GenerateConceptsAsync(topic, sourceAnalysis, options, logger, cancellationToken);
             await logger.SaveJsonAsync("concept-selection.json", conceptSelection, cancellationToken);
 
-            progress?.Report(new ShortGenerationProgress(20, "Tworze scenariusz w Ollama"));
+            progress?.Report(new ShortGenerationProgress(20, "Tworze scenariusz w modelu AI"));
             var script = await _scriptService.GenerateScriptAsync(
                 topic,
                 sourceAnalysis,
@@ -118,7 +119,7 @@ public sealed class ShortGenerator
             await logger.SaveJsonAsync("script-with-visual-plan.json", script, cancellationToken);
             voiceSegments = ApplyScriptMetadataToVoiceSegments(script, voiceSegments);
 
-            progress?.Report(new ShortGenerationProgress(55, "Pobieram klipy z Pexels"));
+            progress?.Report(new ShortGenerationProgress(55, "Pobieram klipy stock"));
             var videoDirectory = Path.Combine(projectDirectory, "videos");
             var clips = await _stockVideoService.DownloadVideosAsync(
                 voiceSegments,
@@ -245,15 +246,64 @@ public sealed class ShortGenerator
         await File.WriteAllTextAsync(path, json, cancellationToken);
     }
 
-    private static bool ShouldRepairAfterReview(ContentReview review)
+    private static object CreateRuntimeOptionsLog(ShortGeneratorOptions options)
     {
-        return !review.Approved
-            || review.HasCriticalErrors
-            || review.Issues.Any(issue =>
-                issue.Code.Contains("hook", StringComparison.OrdinalIgnoreCase)
-                || issue.Code.Contains("promise", StringComparison.OrdinalIgnoreCase)
-                || issue.Code.Contains("newInformation", StringComparison.OrdinalIgnoreCase)
-                || issue.Code.Contains("step", StringComparison.OrdinalIgnoreCase));
+        var openAIKeyProvided = HasValue(
+            options.OpenAIApiKey,
+            Environment.GetEnvironmentVariable("OPENAI_API_KEY"),
+            Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.User),
+            Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.Machine));
+        var configuredProvider = string.IsNullOrWhiteSpace(options.ModelProvider)
+            ? "auto"
+            : options.ModelProvider.Trim().ToLowerInvariant();
+        var resolvedProvider = configuredProvider.Equals("auto", StringComparison.OrdinalIgnoreCase)
+            ? openAIKeyProvided ? "openai" : "ollama"
+            : configuredProvider;
+        return new
+        {
+            modelProvider = options.ModelProvider,
+            resolvedProvider,
+            ollamaBaseUrl = options.OllamaBaseUrl,
+            ollamaModel = options.OllamaModel,
+            openAIBaseUrl = options.OpenAIBaseUrl,
+            openAIModel = options.OpenAIModel,
+            openAIReasoningEffort = options.OpenAIReasoningEffort,
+            openAIKeyProvided,
+            strictModelSchema = resolvedProvider.Equals("openai", StringComparison.OrdinalIgnoreCase),
+            degradedModelMode = !resolvedProvider.Equals("openai", StringComparison.OrdinalIgnoreCase),
+            pexelsKeyProvided = HasValue(
+                options.PexelsApiKey,
+                Environment.GetEnvironmentVariable("PEXELS_API_KEY"),
+                Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.User),
+                Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.Machine)),
+            pixabayKeyProvided = HasValue(
+                options.PixabayApiKey,
+                Environment.GetEnvironmentVariable("PIXABAY_API_KEY"),
+                Environment.GetEnvironmentVariable("PIXABAY_API_KEY", EnvironmentVariableTarget.User),
+                Environment.GetEnvironmentVariable("PIXABAY_API_KEY", EnvironmentVariableTarget.Machine)),
+            piperExeConfigured = HasValue(options.PiperExePath, Environment.GetEnvironmentVariable("PIPER_EXE")),
+            piperModelConfigured = HasValue(options.PiperModelPath, Environment.GetEnvironmentVariable("PIPER_MODEL"))
+        };
+    }
+
+    private static bool HasValue(params string?[] values)
+    {
+        return values.Any(value => !string.IsNullOrWhiteSpace(value));
+    }
+
+    internal static bool ShouldRepairAfterReview(ContentReview review)
+    {
+        var activeBlockingIssues = review.Issues
+            .Where(issue => issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+            .Where(issue => !IsDowngradedReviewIssue(issue))
+            .ToList();
+        return !review.Approved || activeBlockingIssues.Count > 0;
+    }
+
+    private static bool IsDowngradedReviewIssue(ContentReviewIssue issue)
+    {
+        return issue.Message.Contains("[Zdegradowano:", StringComparison.OrdinalIgnoreCase)
+            || issue.SuggestedFix.Contains("[Zdegradowano:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void LogQualityGate(GenerationDebugLogger logger, QualityGateReport report)

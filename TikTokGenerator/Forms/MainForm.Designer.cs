@@ -21,6 +21,8 @@ partial class MainForm
     private TextBox briefTextBox;
     private Label pexelsApiKeyLabel;
     private TextBox pexelsApiKeyTextBox;
+    private Label pixabayApiKeyLabel;
+    private TextBox pixabayApiKeyTextBox;
     private Button generateShortButton;
     private Label progressLabel;
     private ProgressBar progressBar;
@@ -58,6 +60,8 @@ partial class MainForm
         briefTextBox = new TextBox();
         pexelsApiKeyLabel = new Label();
         pexelsApiKeyTextBox = new TextBox();
+        pixabayApiKeyLabel = new Label();
+        pixabayApiKeyTextBox = new TextBox();
         generateShortButton = new Button();
         progressLabel = new Label();
         progressBar = new ProgressBar();
@@ -87,15 +91,17 @@ partial class MainForm
         rootLayout.Controls.Add(briefTextBox, 1, 8);
         rootLayout.Controls.Add(pexelsApiKeyLabel, 0, 9);
         rootLayout.Controls.Add(pexelsApiKeyTextBox, 1, 9);
-        rootLayout.Controls.Add(generateShortButton, 1, 10);
-        rootLayout.Controls.Add(progressLabel, 0, 11);
-        rootLayout.Controls.Add(progressBar, 1, 11);
-        rootLayout.Controls.Add(statusLabel, 1, 12);
+        rootLayout.Controls.Add(pixabayApiKeyLabel, 0, 10);
+        rootLayout.Controls.Add(pixabayApiKeyTextBox, 1, 10);
+        rootLayout.Controls.Add(generateShortButton, 1, 11);
+        rootLayout.Controls.Add(progressLabel, 0, 12);
+        rootLayout.Controls.Add(progressBar, 1, 12);
+        rootLayout.Controls.Add(statusLabel, 1, 13);
         rootLayout.Dock = DockStyle.Fill;
         rootLayout.Location = new Point(0, 0);
         rootLayout.Name = "rootLayout";
         rootLayout.Padding = new Padding(24);
-        rootLayout.RowCount = 13;
+        rootLayout.RowCount = 14;
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
@@ -106,10 +112,11 @@ partial class MainForm
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 128F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 128F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+        rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
-        rootLayout.Size = new Size(760, 850);
+        rootLayout.Size = new Size(760, 900);
         rootLayout.TabIndex = 0;
         // 
         // titleLabel
@@ -299,15 +306,36 @@ partial class MainForm
         pexelsApiKeyTextBox.Size = new Size(556, 31);
         pexelsApiKeyTextBox.TabIndex = 16;
         // 
+        // pixabayApiKeyLabel
+        // 
+        pixabayApiKeyLabel.AutoSize = true;
+        pixabayApiKeyLabel.Dock = DockStyle.Fill;
+        pixabayApiKeyLabel.Location = new Point(27, 722);
+        pixabayApiKeyLabel.Name = "pixabayApiKeyLabel";
+        pixabayApiKeyLabel.Size = new Size(144, 42);
+        pixabayApiKeyLabel.TabIndex = 17;
+        pixabayApiKeyLabel.Text = "Pixabay API:";
+        pixabayApiKeyLabel.TextAlign = ContentAlignment.MiddleLeft;
+        // 
+        // pixabayApiKeyTextBox
+        // 
+        pixabayApiKeyTextBox.Dock = DockStyle.Fill;
+        pixabayApiKeyTextBox.Location = new Point(177, 727);
+        pixabayApiKeyTextBox.Margin = new Padding(3, 5, 3, 3);
+        pixabayApiKeyTextBox.Name = "pixabayApiKeyTextBox";
+        pixabayApiKeyTextBox.PasswordChar = '*';
+        pixabayApiKeyTextBox.Size = new Size(556, 31);
+        pixabayApiKeyTextBox.TabIndex = 18;
+        // 
         // generateShortButton
         // 
         generateShortButton.AutoSize = true;
         generateShortButton.Dock = DockStyle.Left;
-        generateShortButton.Location = new Point(177, 733);
+        generateShortButton.Location = new Point(177, 775);
         generateShortButton.Margin = new Padding(3, 11, 3, 8);
         generateShortButton.Name = "generateShortButton";
         generateShortButton.Size = new Size(139, 33);
-        generateShortButton.TabIndex = 17;
+        generateShortButton.TabIndex = 19;
         generateShortButton.Text = "Wygeneruj short";
         generateShortButton.UseVisualStyleBackColor = true;
         generateShortButton.Click += generateShortButton_Click;
@@ -316,30 +344,30 @@ partial class MainForm
         // 
         progressLabel.AutoSize = true;
         progressLabel.Dock = DockStyle.Fill;
-        progressLabel.Location = new Point(27, 774);
+        progressLabel.Location = new Point(27, 816);
         progressLabel.Name = "progressLabel";
         progressLabel.Size = new Size(144, 42);
-        progressLabel.TabIndex = 18;
+        progressLabel.TabIndex = 20;
         progressLabel.Text = "Postep:";
         progressLabel.TextAlign = ContentAlignment.MiddleLeft;
         // 
         // progressBar
         // 
         progressBar.Dock = DockStyle.Fill;
-        progressBar.Location = new Point(177, 783);
+        progressBar.Location = new Point(177, 825);
         progressBar.Margin = new Padding(3, 9, 3, 9);
         progressBar.Name = "progressBar";
         progressBar.Size = new Size(556, 24);
-        progressBar.TabIndex = 19;
+        progressBar.TabIndex = 21;
         // 
         // statusLabel
         // 
         statusLabel.AutoEllipsis = true;
         statusLabel.Dock = DockStyle.Fill;
-        statusLabel.Location = new Point(177, 816);
+        statusLabel.Location = new Point(177, 858);
         statusLabel.Name = "statusLabel";
         statusLabel.Size = new Size(556, 44);
-        statusLabel.TabIndex = 20;
+        statusLabel.TabIndex = 22;
         statusLabel.Text = "Gotowe do pracy.";
         statusLabel.TextAlign = ContentAlignment.MiddleLeft;
         // 
@@ -347,10 +375,10 @@ partial class MainForm
         // 
         AutoScaleDimensions = new SizeF(10F, 25F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(760, 850);
+        ClientSize = new Size(760, 900);
         Controls.Add(rootLayout);
         Font = new Font("Segoe UI", 10.5F);
-        MinimumSize = new Size(720, 760);
+        MinimumSize = new Size(720, 820);
         Name = "MainForm";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "Generator TikTokow";

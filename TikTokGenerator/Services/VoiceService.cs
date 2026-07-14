@@ -4,7 +4,17 @@ using TikTokGenerator.Models;
 
 namespace TikTokGenerator.Services;
 
-public sealed class VoiceService
+public interface IVoiceService
+{
+    Task<IReadOnlyList<VoiceSegment>> GenerateVoiceAsync(
+        ShortScript script,
+        string outputDirectory,
+        ShortGeneratorOptions options,
+        GenerationDebugLogger? logger = null,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class VoiceService : IVoiceService
 {
     public async Task<IReadOnlyList<VoiceSegment>> GenerateVoiceAsync(
         ShortScript script,

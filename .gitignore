@@ -4,6 +4,7 @@ obj/
 *.user
 *.suo
 *.rsuser
+TikTokGenerator/appsettings.local.json
 
 TikTokGenerator/Output/*
 !TikTokGenerator/Output/.gitkeep

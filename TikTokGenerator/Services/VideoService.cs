@@ -1,10 +1,23 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Text.Json;
 using TikTokGenerator.Models;
 
 namespace TikTokGenerator.Services;
 
-public sealed class VideoService
+public interface IVideoService
+{
+    Task<string> RenderVideoAsync(
+        ShortScript script,
+        IReadOnlyList<VoiceSegment> voiceSegments,
+        IReadOnlyList<DownloadedVideoClip> clips,
+        string projectDirectory,
+        IProgress<ShortGenerationProgress>? progress = null,
+        GenerationDebugLogger? logger = null,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class VideoService : IVideoService
 {
     public async Task<string> RenderVideoAsync(
         ShortScript script,
@@ -17,9 +30,11 @@ public sealed class VideoService
     {
         var ffmpegPath = ToolLocator.FindFfmpeg()
             ?? throw new FileNotFoundException("Nie znaleziono FFmpeg. Dodaj ffmpeg.exe do Tools albo zainstaluj FFmpeg w PATH.");
+        var ffprobePath = ToolLocator.FindFfprobe()
+            ?? throw new FileNotFoundException("Nie znaleziono ffprobe.exe. Dodaj ffprobe.exe do Tools albo zainstaluj FFmpeg w PATH.");
 
         Directory.CreateDirectory(projectDirectory);
-        logger?.Info($"Rendering video with FFmpeg={ffmpegPath}; segments={voiceSegments.Count}; clips={clips.Count}");
+        logger?.Info($"Rendering video with FFmpeg={ffmpegPath}; FFprobe={ffprobePath}; segments={voiceSegments.Count}; clips={clips.Count}");
         var subtitleDirectory = Path.Combine(projectDirectory, "subtitles");
         var segmentDirectory = Path.Combine(projectDirectory, "segments");
         Directory.CreateDirectory(subtitleDirectory);
@@ -53,12 +68,14 @@ public sealed class VideoService
                 cancellationToken);
 
             segmentPaths.Add(segmentPath);
+            await ValidateMediaFileAsync(ffprobePath, segmentPath, $"segment {segment.Index}", cancellationToken);
             logger?.Info($"Rendered segment={segment.Index} path={segmentPath}");
         }
 
         progress?.Report(new ShortGenerationProgress(92, "Lacze segmenty"));
         var outputPath = Path.Combine(projectDirectory, "short.mp4");
-        await ConcatSegmentsAsync(ffmpegPath, segmentPaths, outputPath, cancellationToken);
+        await ConcatSegmentsAsync(ffmpegPath, ffprobePath, segmentPaths, outputPath, logger, cancellationToken);
+        await ValidateMediaFileAsync(ffprobePath, outputPath, "final short", cancellationToken);
         logger?.Info($"Concatenated final video path={outputPath}");
 
         progress?.Report(new ShortGenerationProgress(96, "Zapisuje metadane"));
@@ -115,13 +132,22 @@ public sealed class VideoService
 
     private static async Task ConcatSegmentsAsync(
         string ffmpegPath,
+        string ffprobePath,
         IReadOnlyList<string> segmentPaths,
         string outputPath,
+        GenerationDebugLogger? logger,
         CancellationToken cancellationToken)
     {
         var listPath = Path.Combine(Path.GetDirectoryName(outputPath) ?? AppContext.BaseDirectory, "concat.txt");
         var lines = segmentPaths.Select(path => $"file '{EscapeConcatPath(path)}'");
         await File.WriteAllLinesAsync(listPath, lines, cancellationToken);
+        var canCopy = await SegmentStreamsAreCompatibleAsync(ffprobePath, segmentPaths, logger, cancellationToken);
+        if (!canCopy)
+        {
+            logger?.Warning("Segment streams differ. Using FFmpeg concat with re-encode instead of concat demuxer stream copy.");
+            await ConcatSegmentsWithReencodeAsync(ffmpegPath, listPath, outputPath, cancellationToken);
+            return;
+        }
 
         using var process = CreateFfmpegProcess(ffmpegPath);
         var args = process.StartInfo.ArgumentList;
@@ -138,6 +164,170 @@ public sealed class VideoService
         args.Add(outputPath);
 
         await RunProcessAsync(process, "FFmpeg nie polaczyl segmentow.", cancellationToken);
+    }
+
+    private static async Task ConcatSegmentsWithReencodeAsync(
+        string ffmpegPath,
+        string listPath,
+        string outputPath,
+        CancellationToken cancellationToken)
+    {
+        using var process = CreateFfmpegProcess(ffmpegPath);
+        var args = process.StartInfo.ArgumentList;
+
+        args.Add("-y");
+        args.Add("-f");
+        args.Add("concat");
+        args.Add("-safe");
+        args.Add("0");
+        args.Add("-i");
+        args.Add(listPath);
+        args.Add("-c:v");
+        args.Add("libx264");
+        args.Add("-preset");
+        args.Add("veryfast");
+        args.Add("-profile:v");
+        args.Add("high");
+        args.Add("-pix_fmt");
+        args.Add("yuv420p");
+        args.Add("-c:a");
+        args.Add("aac");
+        args.Add("-b:a");
+        args.Add("192k");
+        args.Add(outputPath);
+
+        await RunProcessAsync(process, "FFmpeg nie polaczyl segmentow przez reenkodowanie.", cancellationToken);
+    }
+
+    private static async Task<bool> SegmentStreamsAreCompatibleAsync(
+        string ffprobePath,
+        IReadOnlyList<string> segmentPaths,
+        GenerationDebugLogger? logger,
+        CancellationToken cancellationToken)
+    {
+        if (segmentPaths.Count <= 1)
+        {
+            return true;
+        }
+
+        var signatures = new List<string>();
+        foreach (var segmentPath in segmentPaths)
+        {
+            var signature = await ReadMediaSignatureAsync(ffprobePath, segmentPath, cancellationToken);
+            if (string.IsNullOrWhiteSpace(signature))
+            {
+                logger?.Warning($"ffprobe did not produce a usable stream signature for {segmentPath}.");
+                return false;
+            }
+
+            signatures.Add(signature);
+        }
+
+        var compatible = StreamSignaturesAreCompatible(signatures);
+        if (!compatible)
+        {
+            logger?.Warning($"Segment stream signatures differ: {string.Join(" | ", signatures)}");
+        }
+
+        return compatible;
+    }
+
+    internal static bool StreamSignaturesAreCompatible(IReadOnlyList<string> signatures)
+    {
+        if (signatures.Count <= 1)
+        {
+            return true;
+        }
+
+        var first = signatures[0];
+        return !string.IsNullOrWhiteSpace(first)
+            && signatures.All(signature => string.Equals(signature, first, StringComparison.Ordinal));
+    }
+
+    private static async Task ValidateMediaFileAsync(
+        string ffprobePath,
+        string mediaPath,
+        string label,
+        CancellationToken cancellationToken)
+    {
+        if (!File.Exists(mediaPath) || new FileInfo(mediaPath).Length == 0)
+        {
+            throw new InvalidOperationException($"FFmpeg utworzyl pusty albo brakujacy plik dla {label}: {mediaPath}");
+        }
+
+        var json = await RunProcessForOutputAsync(
+            ffprobePath,
+            ["-v", "error", "-show_streams", "-of", "json", mediaPath],
+            $"ffprobe nie potwierdzil poprawnosci pliku dla {label}.",
+            cancellationToken);
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("streams", out var streams)
+            || streams.ValueKind != JsonValueKind.Array
+            || streams.GetArrayLength() == 0)
+        {
+            throw new InvalidOperationException($"ffprobe nie znalazl streamow w pliku dla {label}: {mediaPath}");
+        }
+    }
+
+    private static async Task<string> ReadMediaSignatureAsync(
+        string ffprobePath,
+        string mediaPath,
+        CancellationToken cancellationToken)
+    {
+        var json = await RunProcessForOutputAsync(
+            ffprobePath,
+            ["-v", "error", "-show_streams", "-of", "json", mediaPath],
+            $"ffprobe nie odczytal streamow dla segmentu: {mediaPath}.",
+            cancellationToken);
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("streams", out var streams)
+            || streams.ValueKind != JsonValueKind.Array)
+        {
+            return string.Empty;
+        }
+
+        var parts = new List<string>();
+        foreach (var stream in streams.EnumerateArray())
+        {
+            var codecType = ReadJsonString(stream, "codec_type");
+            if (!codecType.Equals("video", StringComparison.OrdinalIgnoreCase)
+                && !codecType.Equals("audio", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            parts.Add(string.Join(
+                ":",
+                codecType,
+                ReadJsonString(stream, "codec_name"),
+                ReadJsonString(stream, "profile"),
+                ReadJsonString(stream, "pix_fmt"),
+                ReadJsonString(stream, "sample_rate"),
+                ReadJsonString(stream, "channel_layout"),
+                ReadJsonString(stream, "r_frame_rate"),
+                ReadJsonString(stream, "time_base"),
+                ReadJsonInt(stream, "width"),
+                ReadJsonInt(stream, "height")));
+        }
+
+        return string.Join("|", parts);
+    }
+
+    private static string ReadJsonString(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var value)
+            && value.ValueKind == JsonValueKind.String
+                ? value.GetString() ?? string.Empty
+                : string.Empty;
+    }
+
+    private static string ReadJsonInt(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt32(out var result)
+                ? result.ToString(CultureInfo.InvariantCulture)
+                : string.Empty;
     }
 
     private static Process CreateFfmpegProcess(string ffmpegPath)
@@ -172,6 +362,43 @@ public sealed class VideoService
         {
             throw new InvalidOperationException($"{errorMessage} Output: {output} Error: {error}");
         }
+    }
+
+    private static async Task<string> RunProcessForOutputAsync(
+        string executablePath,
+        IReadOnlyList<string> arguments,
+        string errorMessage,
+        CancellationToken cancellationToken)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = executablePath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            }
+        };
+        foreach (var argument in arguments)
+        {
+            process.StartInfo.ArgumentList.Add(argument);
+        }
+
+        process.Start();
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken);
+
+        var output = await outputTask;
+        var error = await errorTask;
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"{errorMessage} Output: {output} Error: {error}");
+        }
+
+        return output;
     }
 
     private static async Task CreateSubtitleFileAsync(
@@ -247,7 +474,7 @@ public sealed class VideoService
         var lines = new List<string>
         {
             $"Title: {script.Title}",
-            "Video clips provided by Pexels:",
+            "Video clips provided by stock providers:",
             string.Empty
         };
 

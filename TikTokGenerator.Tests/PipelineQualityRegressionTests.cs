@@ -38,6 +38,101 @@ public sealed class PipelineQualityRegressionTests
     }
 
     [Fact]
+    public void SanitizeUnsupportedContent_WhenFactParaphrasesSupportedEvidence_UsesEvidenceAndPassesDiagnostics()
+    {
+        var topic = new SelectedTopic
+        {
+            Title = "Aplikacja AI, ktora robi notatki z nagran",
+            SourceUrl = "offline://test",
+            SourceText = """
+            Praktyczna teza: aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania, ale wynik trzeba sprawdzic.
+            Konkretne kroki: wgraj jedno nagranie lub transkrypcje, popros o liste decyzji i zadan, porownaj wynik z najwazniejszym fragmentem nagrania.
+            Ograniczenia: nie obiecuj idealnej dokladnosci ani pracy bez internetu.
+            """
+        };
+        var analysis = new SourceAnalysis
+        {
+            MainThesis = "Aplikacja AI do nagra\u0144 moze pomoc szybciej znalezc decyzje i zadania, ale wynik trzeba sprawdzic.",
+            Facts =
+            [
+                new SourceFact
+                {
+                    Id = "F1",
+                    Text = "Aplikacja AI do nagra\u0144 moze pomoc szybciej znalezc decyzje i zadania.",
+                    Evidence = "aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania"
+                },
+                new SourceFact
+                {
+                    Id = "F2",
+                    Text = "Wynik dzia\u0142ania aplikacji trzeba sprawdzi\u0107.",
+                    Evidence = "\u201eale wynik trzeba sprawdzic\u201d"
+                }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "Wgraj jedno nagranie lub transkrypcje", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S2", Text = "Popros o liste decyzji i zadan", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S3", Text = "Porownaj wynik z najwazniejszym fragmentem nagrania", SourceFactIds = ["F2"] }
+            ],
+            Limitations = ["Nie obiecuj idealnej dok\u0142adno\u015bci."],
+            MostUsefulFragment = "Wgraj jedno nagranie lub transkrypcje, popros o liste decyzji i zadan, porownaj wynik z najwazniejszym fragmentem nagrania."
+        };
+
+        SourceAnalysisDiagnosticsService.SanitizeUnsupportedContent(topic, analysis);
+        var diagnostics = SourceAnalysisDiagnosticsService.CreateDiagnostics(topic, analysis);
+
+        Assert.False(diagnostics.HasBlockingIssues);
+        var repairedFact = Assert.Single(analysis.Facts, fact => fact.Id == "F2");
+        Assert.Equal("ale wynik trzeba sprawdzic", repairedFact.Text);
+        Assert.Contains(analysis.Limitations, limitation => limitation.Contains("dok\u0142adno\u015bci", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void SanitizeUnsupportedContent_WhenFactIsRemoved_RewritesStepSourceFactIds()
+    {
+        var topic = new SelectedTopic
+        {
+            Title = "Aplikacja AI, ktora robi notatki z nagran",
+            SourceUrl = "offline://test",
+            SourceText = """
+            Praktyczna teza: aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania.
+            Konkretne kroki: wgraj jedno nagranie lub transkrypcje.
+            """
+        };
+        var analysis = new SourceAnalysis
+        {
+            MainThesis = "Aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania.",
+            Facts =
+            [
+                new SourceFact
+                {
+                    Id = "F1",
+                    Text = "Aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania.",
+                    Evidence = "aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania"
+                },
+                new SourceFact
+                {
+                    Id = "F2",
+                    Text = "Aplikacja dziala offline bez internetu.",
+                    Evidence = "tryb offline"
+                }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "Wgraj jedno nagranie lub transkrypcje", SourceFactIds = ["F2"] },
+                new SourceStep { Id = "S2", Text = "Wgraj jedno nagranie lub transkrypcje", SourceFactIds = ["F1", "F2"] }
+            ],
+            MostUsefulFragment = "wgraj jedno nagranie lub transkrypcje"
+        };
+
+        SourceAnalysisDiagnosticsService.SanitizeUnsupportedContent(topic, analysis);
+
+        Assert.DoesNotContain(analysis.Facts, fact => fact.Id == "F2");
+        Assert.All(analysis.Steps, step => Assert.DoesNotContain("F2", step.SourceFactIds));
+        Assert.All(analysis.Steps, step => Assert.Contains("F1", step.SourceFactIds));
+    }
+
+    [Fact]
     public void SanitizeUnsupportedContent_WhenModelInventsScannerSteps_RecoversConcreteStepsFromSource()
     {
         var topic = new SelectedTopic

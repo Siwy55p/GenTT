@@ -1,4 +1,4 @@
-namespace TikTokGenerator;
+﻿namespace TikTokGenerator;
 
 using TikTokGenerator.Forms;
 using TikTokGenerator.Services;
@@ -15,6 +15,7 @@ static class Program
         // see https://aka.ms/applicationconfiguration.
         ApplicationConfiguration.Initialize();
         using var httpClient = new HttpClient();
+        var appSettings = AppSettingsService.Load();
 
         var scriptService = new ScriptService(httpClient);
         var voiceService = new VoiceService();
@@ -23,6 +24,7 @@ static class Program
 
         Application.Run(new MainForm(
             new TrendService(httpClient),
-            new ShortGenerator(scriptService, voiceService, stockVideoService, videoService)));
+            new ShortGenerator(scriptService, voiceService, stockVideoService, videoService),
+            appSettings));
     }    
 }

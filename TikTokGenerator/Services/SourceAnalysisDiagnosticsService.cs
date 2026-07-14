@@ -78,6 +78,8 @@ public static class SourceAnalysisDiagnosticsService
             });
         }
 
+        NormalizeStepFactIds(analysis.Steps, analysis.Facts, logger);
+
         if (analysis.Steps.Count == 0)
         {
             var sourceSteps = CreateStepsFromSourceLabels(topic.SourceText, analysis.Facts[0].Id);
@@ -87,6 +89,8 @@ public static class SourceAnalysisDiagnosticsService
                 analysis.Steps.AddRange(sourceSteps);
             }
         }
+
+        NormalizeStepFactIds(analysis.Steps, analysis.Facts, logger);
 
         if (!IsSupported(source, analysis.MainThesis))
         {
@@ -116,7 +120,7 @@ public static class SourceAnalysisDiagnosticsService
             return true;
         }
 
-        if (normalizedSource.Contains(normalizedValue, StringComparison.OrdinalIgnoreCase))
+        if (IsNormalizedFragment(normalizedSource, normalizedValue))
         {
             return true;
         }
@@ -143,6 +147,12 @@ public static class SourceAnalysisDiagnosticsService
         var builder = new StringBuilder(decomposed.Length);
         foreach (var ch in decomposed)
         {
+            if (char.ToLowerInvariant(ch) == '\u0142')
+            {
+                builder.Append('l');
+                continue;
+            }
+
             if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.NonSpacingMark)
             {
                 continue;
@@ -214,8 +224,16 @@ public static class SourceAnalysisDiagnosticsService
         var supported = new List<SourceFact>();
         foreach (var fact in facts)
         {
-            if (IsSupported(normalizedSource, fact.Text) || IsSupported(normalizedSource, fact.Evidence))
+            if (IsSupported(normalizedSource, fact.Text))
             {
+                supported.Add(fact);
+                continue;
+            }
+
+            if (TryReplaceFactTextWithSupportedEvidence(normalizedSource, fact, out var replacementText))
+            {
+                logger?.Warning($"Source analysis fact {fact.Id} was unsupported and replaced with evidence excerpt. Original={fact.Text}");
+                fact.Text = replacementText;
                 supported.Add(fact);
                 continue;
             }
@@ -224,6 +242,32 @@ public static class SourceAnalysisDiagnosticsService
         }
 
         return supported;
+    }
+
+    private static bool TryReplaceFactTextWithSupportedEvidence(
+        string normalizedSource,
+        SourceFact fact,
+        out string replacementText)
+    {
+        replacementText = CleanEvidenceText(fact.Evidence);
+        if (string.IsNullOrWhiteSpace(replacementText))
+        {
+            return false;
+        }
+
+        var normalizedEvidence = Normalize(replacementText);
+        if (ExtractTerms(normalizedEvidence).Count() < 2)
+        {
+            return false;
+        }
+
+        return IsNormalizedFragment(normalizedSource, normalizedEvidence);
+    }
+
+    private static string CleanEvidenceText(string value)
+    {
+        return Regex.Replace(value.Trim(), "\\s+", " ", RegexOptions.CultureInvariant)
+            .Trim(' ', '.', ',', ';', ':', '"', '\'', '`', '\u201c', '\u201d', '\u201e', '\u201a', '\u2018', '\u2019');
     }
 
     private static List<SourceStep> KeepSupportedSteps(
@@ -244,6 +288,47 @@ public static class SourceAnalysisDiagnosticsService
         }
 
         return supported;
+    }
+
+    private static void NormalizeStepFactIds(
+        List<SourceStep> steps,
+        IReadOnlyList<SourceFact> facts,
+        GenerationDebugLogger? logger)
+    {
+        var validFactIds = facts
+            .Select(fact => fact.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (validFactIds.Count == 0)
+        {
+            return;
+        }
+
+        var fallbackFactId = validFactIds.First();
+        foreach (var step in steps)
+        {
+            var originalIds = step.SourceFactIds.ToArray();
+            step.SourceFactIds = step.SourceFactIds
+                .Where(id => validFactIds.Contains(id))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (step.SourceFactIds.Count == 0)
+            {
+                step.SourceFactIds.Add(fallbackFactId);
+            }
+
+            if (!originalIds.SequenceEqual(step.SourceFactIds, StringComparer.OrdinalIgnoreCase))
+            {
+                logger?.Warning($"Source analysis step {step.Id} sourceFactIds were updated after fact sanitization. Original={string.Join(",", originalIds)}; Fixed={string.Join(",", step.SourceFactIds)}");
+            }
+        }
+    }
+
+    private static bool IsNormalizedFragment(string normalizedSource, string normalizedValue)
+    {
+        return string.IsNullOrWhiteSpace(normalizedValue)
+            || normalizedSource.Contains(normalizedValue, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FirstUsefulSourceSentence(string sourceText)

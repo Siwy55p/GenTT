@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using TikTokGenerator.Models;
@@ -14,11 +12,16 @@ public sealed class ScriptService
         WriteIndented = true
     };
 
-    private readonly HttpClient _httpClient;
+    private readonly IModelClient _modelClient;
 
     public ScriptService(HttpClient httpClient)
+        : this(httpClient, new ModelClient(httpClient))
     {
-        _httpClient = httpClient;
+    }
+
+    public ScriptService(HttpClient httpClient, IModelClient modelClient)
+    {
+        _modelClient = modelClient;
     }
 
     public async Task<SourceAnalysis> AnalyzeSourceAsync(
@@ -32,7 +35,7 @@ public sealed class ScriptService
             throw new InvalidOperationException("Wklej material zrodlowy. Sam tytul tematu nie wystarczy do bezpiecznego scenariusza.");
         }
 
-        var raw = await CallOllamaAsync(
+        var raw = await CallModelAsync(
             CreateSourceAnalysisPrompt(topic),
             CreateSourceAnalysisSchema(),
             "source-analysis",
@@ -88,7 +91,7 @@ public sealed class ScriptService
         GenerationDebugLogger? logger = null,
         CancellationToken cancellationToken = default)
     {
-        var raw = await CallOllamaAsync(
+        var raw = await CallModelAsync(
             CreateConceptPrompt(topic, analysis),
             CreateConceptSelectionSchema(),
             "concept-selection",
@@ -138,7 +141,7 @@ public sealed class ScriptService
             throw new InvalidOperationException("Wklej material zrodlowy. Sam tytul tematu nie wystarczy do bezpiecznego scenariusza.");
         }
 
-        var raw = await CallOllamaAsync(
+        var raw = await CallModelAsync(
             CreatePrompt(topic, analysis, selectedConcept),
             CreateScriptSchema(),
             "script",
@@ -174,7 +177,7 @@ public sealed class ScriptService
         GenerationDebugLogger? logger = null,
         CancellationToken cancellationToken = default)
     {
-        var raw = await CallOllamaAsync(
+        var raw = await CallModelAsync(
             CreateReviewPrompt(topic, analysis, script),
             CreateContentReviewSchema(),
             "content-review",
@@ -220,7 +223,7 @@ public sealed class ScriptService
             logger?.Warning($"Content review repair is rebuilding script from source steps. UnsupportedClaims={diagnostics.Summary.HasUnsupportedClaims}; Errors={diagnostics.Summary.ErrorCount}; SourceSteps={analysis.Steps.Count}");
             var rebuilt = BuildSourceSafeScript(topic, analysis, repaired);
             NormalizeScript(rebuilt, topic, analysis);
-            return rebuilt;
+            return AcceptOrRejectRepairCandidate(topic, analysis, repaired, rebuilt, logger);
         }
 
         if (HasPromiseProblem(review) || !review.Approved)
@@ -242,6 +245,93 @@ public sealed class ScriptService
         return repaired;
     }
 
+    private static ShortScript AcceptOrRejectRepairCandidate(
+        SelectedTopic topic,
+        SourceAnalysis analysis,
+        ShortScript original,
+        ShortScript candidate,
+        GenerationDebugLogger? logger)
+    {
+        var candidateIssues = ValidateSourceSafeRepairCandidate(analysis, candidate).ToList();
+        if (candidateIssues.Count == 0)
+        {
+            logger?.Info("Source-safe repair candidate passed local validation.");
+            return candidate;
+        }
+
+        foreach (var issue in candidateIssues)
+        {
+            logger?.Error($"Source-safe repair candidate rejected: {issue}");
+        }
+
+        var originalDiagnostics = ShortDiagnosticsService.CreateScriptDiagnostics(topic, original);
+        if (originalDiagnostics.Summary.ErrorCount == 0
+            && !originalDiagnostics.Summary.HasUnsupportedClaims
+            && ScriptCoversSourceSteps(analysis, original)
+            && ScenesHaveDistinctNewInformation(original))
+        {
+            logger?.Warning("Source-safe repair candidate was rejected; keeping original script because local diagnostics still pass.");
+            return original;
+        }
+
+        throw new InvalidOperationException(
+            "Lokalna walidacja odrzucila scenariusz po naprawie, a oryginal nie jest bezpiecznym fallbackiem. Render zostal zatrzymany przed TTS i FFmpeg.");
+    }
+
+    private static IEnumerable<string> ValidateSourceSafeRepairCandidate(
+        SourceAnalysis analysis,
+        ShortScript candidate)
+    {
+        var sceneCount = candidate.Scenes.Count;
+        var expectedSceneCount = Math.Min(analysis.Steps.Count, 4);
+        if (expectedSceneCount > 0 && sceneCount < expectedSceneCount)
+        {
+            yield return $"missing_source_step_scenes expected={expectedSceneCount} actual={sceneCount}";
+        }
+
+        var normalizedVoiceOvers = candidate.Scenes
+            .Select(scene => NormalizeForComparison(scene.VoiceOver))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToList();
+        if (normalizedVoiceOvers.Count != normalizedVoiceOvers.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+        {
+            yield return "repeated_voice_over";
+        }
+
+        var normalizedNewInformation = candidate.Scenes
+            .Select(scene => NormalizeForComparison(scene.NewInformation))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToList();
+        if (normalizedNewInformation.Count != sceneCount
+            || normalizedNewInformation.Count != normalizedNewInformation.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+        {
+            yield return "repeated_or_missing_new_information";
+        }
+
+        var validFactIds = analysis.Facts
+            .Select(fact => fact.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (validFactIds.Count > 0
+            && candidate.Scenes.Any(scene => scene.SourceFactIds.Count == 0 || scene.SourceFactIds.Any(id => !validFactIds.Contains(id))))
+        {
+            yield return "invalid_source_fact_ids";
+        }
+
+        var scriptText = SourceAnalysisDiagnosticsService.Normalize(string.Join(
+            " ",
+            candidate.Hook,
+            candidate.Ending,
+            string.Join(" ", candidate.Scenes.Select(scene => $"{scene.VoiceOver} {scene.NewInformation}"))));
+        foreach (var step in analysis.Steps.Take(4).Where(step => !string.IsNullOrWhiteSpace(step.Text)))
+        {
+            if (!StepIsCoveredByScript(scriptText, step.Text))
+            {
+                yield return $"missing_source_step:{step.Id}";
+            }
+        }
+    }
+
     public async Task<VisualPlan> CreateVisualPlanAsync(
         SelectedTopic topic,
         SourceAnalysis analysis,
@@ -250,7 +340,7 @@ public sealed class ScriptService
         GenerationDebugLogger? logger = null,
         CancellationToken cancellationToken = default)
     {
-        var raw = await CallOllamaAsync(
+        var raw = await CallModelAsync(
             CreateVisualPlanPrompt(topic, analysis, script),
             CreateVisualPlanSchema(),
             "visual-plan",
@@ -481,7 +571,7 @@ public sealed class ScriptService
         return shortened;
     }
 
-    private async Task<string> CallOllamaAsync(
+    private async Task<string> CallModelAsync(
         string prompt,
         object formatSchema,
         string debugName,
@@ -491,57 +581,19 @@ public sealed class ScriptService
         double temperature,
         int numPredict)
     {
-        var request = new
-        {
-            model = string.IsNullOrWhiteSpace(options.OllamaModel) ? "qwen3:4b" : options.OllamaModel,
-            prompt,
-            stream = false,
-            format = formatSchema,
-            think = false,
-            options = new
-            {
+        var response = await _modelClient.GenerateJsonAsync(
+            new ModelJsonRequest(
+                prompt,
+                formatSchema,
+                debugName,
+                options,
                 temperature,
-                num_predict = numPredict
-            }
-        };
+                numPredict),
+            logger,
+            cancellationToken);
 
-        var endpoint = new Uri(new Uri(options.OllamaBaseUrl.TrimEnd('/') + "/"), "api/generate");
-        logger?.Info($"Calling Ollama endpoint={endpoint} model={request.model} stage={debugName}; promptChars={prompt.Length}; schemaType={formatSchema.GetType().Name}; temperature={temperature:0.###}; numPredict={numPredict}");
-
-        try
-        {
-            var stopwatch = Stopwatch.StartNew();
-            using var response = await _httpClient.PostAsJsonAsync(endpoint, request, JsonOptions, cancellationToken);
-            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            stopwatch.Stop();
-            logger?.Info($"Ollama HTTP response stage={debugName}; status={(int)response.StatusCode}; elapsedMs={stopwatch.ElapsedMilliseconds}; bodyChars={responseBody.Length}");
-            if (logger is not null)
-            {
-                await logger.SaveTextAsync($"ollama-{debugName}-http-response.json", responseBody, cancellationToken);
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new InvalidOperationException($"Ollama zwrocila blad HTTP {(int)response.StatusCode}: {responseBody}");
-            }
-
-            var ollamaResponse = JsonSerializer.Deserialize<OllamaGenerateResponse>(responseBody, JsonOptions)
-                ?? throw new InvalidOperationException("Ollama zwrocila pusta odpowiedz.");
-            logger?.Info($"Ollama model response stage={debugName}; responseChars={ollamaResponse.Response.Length}");
-
-            if (logger is not null)
-            {
-                await logger.SaveTextAsync($"ollama-{debugName}-raw.txt", ollamaResponse.Response, cancellationToken);
-            }
-
-            return ollamaResponse.Response;
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new InvalidOperationException(
-                "Nie moge polaczyc sie z Ollama. Uruchom Ollama i wykonaj: ollama pull qwen3:4b",
-                ex);
-        }
+        logger?.Info($"Model JSON response stage={debugName}; provider={response.Provider}; model={response.Model}; strictSchema={response.StrictSchema}; elapsedMs={response.ElapsedMilliseconds}; chars={response.RawText.Length}");
+        return response.RawText;
     }
 
     private static bool TryDeserializeModelOutput<T>(
@@ -695,7 +747,7 @@ public sealed class ScriptService
             """;
     }
 
-    private static object CreateSourceAnalysisSchema()
+    internal static object CreateSourceAnalysisSchema()
     {
         var stringSchema = new { type = "string" };
         var stringArraySchema = new { type = "array", items = stringSchema };
@@ -748,7 +800,7 @@ public sealed class ScriptService
         };
     }
 
-    private static object CreateConceptSelectionSchema()
+    internal static object CreateConceptSelectionSchema()
     {
         var stringSchema = new { type = "string" };
         var integerSchema = new { type = "integer", minimum = 0, maximum = 10 };
@@ -801,7 +853,7 @@ public sealed class ScriptService
         };
     }
 
-    private static object CreateScriptSchema()
+    internal static object CreateScriptSchema()
     {
         var stringSchema = new { type = "string" };
         var stringArraySchema = new { type = "array", items = stringSchema };
@@ -833,7 +885,7 @@ public sealed class ScriptService
                             estimatedWords = new { type = "integer", minimum = 1, maximum = 30 },
                             sceneGoal = stringSchema
                         },
-                        required = new[] { "role", "voiceOver", "sourceFactIds", "newInformation", "onScreenEmphasis", "estimatedWords", "sceneGoal" },
+                        required = new[] { "role", "voiceOver", "sourceFactIds", "newInformation", "onScreenEmphasis", "onScreenText", "estimatedWords", "sceneGoal" },
                         additionalProperties = false
                     }
                 },
@@ -845,7 +897,7 @@ public sealed class ScriptService
         };
     }
 
-    private static object CreateContentReviewSchema()
+    internal static object CreateContentReviewSchema()
     {
         var stringSchema = new { type = "string" };
         var stringArraySchema = new { type = "array", items = stringSchema };
@@ -888,7 +940,7 @@ public sealed class ScriptService
         };
     }
 
-    private static object CreateVisualPlanSchema()
+    internal static object CreateVisualPlanSchema()
     {
         var stringSchema = new { type = "string" };
         var stringArraySchema = new { type = "array", minItems = 2, maxItems = 4, items = stringSchema };
@@ -1236,7 +1288,7 @@ public sealed class ScriptService
     private static bool ScriptCoversSourceSteps(SourceAnalysis analysis, ShortScript script)
     {
         var sourceSteps = analysis.Steps
-            .Select(step => SourceAnalysisDiagnosticsService.Normalize(step.Text))
+            .Select(step => step.Text)
             .Where(step => !string.IsNullOrWhiteSpace(step))
             .ToList();
         if (sourceSteps.Count == 0)
@@ -1249,8 +1301,38 @@ public sealed class ScriptService
             script.Hook,
             script.Ending,
             string.Join(" ", script.Scenes.Select(scene => $"{scene.VoiceOver} {scene.NewInformation}"))));
-        var coveredSteps = sourceSteps.Count(step => SourceAnalysisDiagnosticsService.IsSupported(scriptText, step));
+        var coveredSteps = sourceSteps.Count(step => StepIsCoveredByScript(scriptText, step));
         return coveredSteps >= Math.Min(sourceSteps.Count, 2);
+    }
+
+    private static bool StepIsCoveredByScript(string normalizedScriptText, string step)
+    {
+        var normalizedStep = SourceAnalysisDiagnosticsService.Normalize(step);
+        if (string.IsNullOrWhiteSpace(normalizedStep))
+        {
+            return true;
+        }
+
+        if (normalizedScriptText.Contains(normalizedStep, StringComparison.OrdinalIgnoreCase)
+            || SourceAnalysisDiagnosticsService.IsSupported(normalizedScriptText, normalizedStep))
+        {
+            return true;
+        }
+
+        var stepTerms = SourceAnalysisDiagnosticsService
+            .ExtractTerms(normalizedStep)
+            .Where(term => term.Length >= 4)
+            .ToList();
+        if (stepTerms.Count == 0)
+        {
+            return true;
+        }
+
+        var scriptTerms = SourceAnalysisDiagnosticsService
+            .ExtractTerms(normalizedScriptText)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var overlap = stepTerms.Count(scriptTerms.Contains) / (double)stepTerms.Count;
+        return overlap >= 0.6;
     }
 
     private static bool ScenesHaveDistinctNewInformation(ShortScript script)
@@ -1458,23 +1540,31 @@ public sealed class ScriptService
 
     private static string EnrichSourceStepVoiceOver(SelectedTopic topic, string step)
     {
-        var normalized = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText} {step}");
-        if (!IsScanner3DContext(normalized))
+        var normalizedContext = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText}");
+        var normalizedStep = SourceAnalysisDiagnosticsService.Normalize(step);
+        if (!IsScanner3DContext(normalizedContext))
         {
             return step;
         }
 
-        if (normalized.Contains("wybierz", StringComparison.OrdinalIgnoreCase)
-            && normalized.Contains("obiekt", StringComparison.OrdinalIgnoreCase)
-            && normalized.Contains("faktur", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Wybierz maly nieruchomy obiekt z wyrazna faktura";
-        }
-
-        if (normalized.Contains("sprawdz", StringComparison.OrdinalIgnoreCase)
-            && normalized.Contains("model", StringComparison.OrdinalIgnoreCase))
+        if (normalizedStep.Contains("sprawdz", StringComparison.OrdinalIgnoreCase)
+            && normalizedStep.Contains("model", StringComparison.OrdinalIgnoreCase))
         {
             return "Sprawdz w aplikacji, czy model 3D nie ma brakujacych fragmentow";
+        }
+
+        if (normalizedStep.Contains("obejdz", StringComparison.OrdinalIgnoreCase)
+            || normalizedStep.Contains("kilku stron", StringComparison.OrdinalIgnoreCase)
+            || normalizedStep.Contains("telefonem", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Obejdz obiekt telefonem z kilku stron";
+        }
+
+        if (normalizedStep.Contains("wybierz", StringComparison.OrdinalIgnoreCase)
+            && normalizedStep.Contains("obiekt", StringComparison.OrdinalIgnoreCase)
+            && normalizedStep.Contains("faktur", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Wybierz maly nieruchomy obiekt z wyrazna faktura";
         }
 
         return step;
@@ -2047,32 +2137,32 @@ public sealed class ScriptService
     }
 
     internal static ShortScript ParseScriptOrFallback(
-        string ollamaResponse,
+        string modelResponse,
         SelectedTopic topic,
         GenerationDebugLogger? logger = null)
     {
-        return ParseScriptOrFallback(ollamaResponse, topic, logger, out _);
+        return ParseScriptOrFallback(modelResponse, topic, logger, out _);
     }
 
     internal static ShortScript ParseScriptOrFallback(
-        string ollamaResponse,
+        string modelResponse,
         SelectedTopic topic,
         GenerationDebugLogger? logger,
         out ScriptQualityReport qualityReport)
     {
-        return ParseScriptOrFallback(ollamaResponse, topic, logger, null, out qualityReport);
+        return ParseScriptOrFallback(modelResponse, topic, logger, null, out qualityReport);
     }
 
     internal static ShortScript ParseScriptOrFallback(
-        string ollamaResponse,
+        string modelResponse,
         SelectedTopic topic,
         GenerationDebugLogger? logger,
         SourceAnalysis? analysis,
         out ScriptQualityReport qualityReport)
     {
-        if (TryDeserializeScript(ollamaResponse, out var directScript, out var directError))
+        if (TryDeserializeScript(modelResponse, out var directScript, out var directError))
         {
-            logger?.Info("Parsed Ollama script directly.");
+            logger?.Info("Parsed model script directly.");
             qualityReport = NormalizeScript(directScript, topic, analysis);
             return directScript;
         }
@@ -2082,11 +2172,11 @@ public sealed class ScriptService
             logger?.Warning($"Direct script parse failed: {directError}");
         }
 
-        if (TryExtractCompleteJsonObject(ollamaResponse, out var jsonObject))
+        if (TryExtractCompleteJsonObject(modelResponse, out var jsonObject))
         {
             if (TryDeserializeScript(jsonObject, out var extractedScript, out var extractedError))
             {
-                logger?.Info("Parsed Ollama script from extracted complete JSON object.");
+                logger?.Info("Parsed model script from extracted complete JSON object.");
                 qualityReport = NormalizeScript(extractedScript, topic, analysis);
                 return extractedScript;
             }
@@ -2095,25 +2185,25 @@ public sealed class ScriptService
         }
         else
         {
-            logger?.Warning("Ollama response did not contain a balanced JSON object.");
+            logger?.Warning("Model response did not contain a balanced JSON object.");
         }
 
-        var looseScript = ParseLooseScript(ollamaResponse);
+        var looseScript = ParseLooseScript(modelResponse);
         if (HasAnyUsefulContent(looseScript))
         {
-            logger?.Warning("Using loosely recovered Ollama script because JSON was invalid.");
+            logger?.Warning("Using loosely recovered model script because JSON was invalid.");
             qualityReport = NormalizeScript(looseScript, topic, analysis);
             return looseScript;
         }
 
-        logger?.Warning("Using fully local fallback script because Ollama JSON was invalid or empty.");
+        logger?.Warning("Using fully local fallback script because model JSON was invalid or empty.");
         var fallbackScript = CreateFallbackScript(topic);
         qualityReport = CreateReportWithIssue(
             "warning",
             "script",
             "fallback_script",
-            "Ollama nie zwrocila poprawnego scenariusza, wiec uzyto lokalnego fallbacku.",
-            ollamaResponse,
+            "Model AI nie zwrocil poprawnego scenariusza, wiec uzyto lokalnego fallbacku.",
+            modelResponse,
             JsonSerializer.Serialize(fallbackScript, JsonOptions));
         return fallbackScript;
     }
@@ -3232,8 +3322,4 @@ public sealed class ScriptService
         });
     }
 
-    private sealed class OllamaGenerateResponse
-    {
-        public string Response { get; set; } = string.Empty;
-    }
 }
