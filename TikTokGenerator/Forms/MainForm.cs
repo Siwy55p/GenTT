@@ -6,24 +6,15 @@ namespace TikTokGenerator.Forms;
 public partial class MainForm : Form
 {
     private readonly TrendService _trendService;
-    private readonly ScriptService _scriptService;
-    private readonly VoiceService _voiceService;
-    private readonly StockVideoService _stockVideoService;
-    private readonly VideoService _videoService;
+    private readonly ShortGenerator _shortGenerator;
     private readonly BindingSource _trendBindingSource = new();
 
     public MainForm(
         TrendService trendService,
-        ScriptService scriptService,
-        VoiceService voiceService,
-        StockVideoService stockVideoService,
-        VideoService videoService)
+        ShortGenerator shortGenerator)
     {
         _trendService = trendService;
-        _scriptService = scriptService;
-        _voiceService = voiceService;
-        _stockVideoService = stockVideoService;
-        _videoService = videoService;
+        _shortGenerator = shortGenerator;
 
         InitializeComponent();
         ConfigureControls();
@@ -33,6 +24,10 @@ public partial class MainForm : Form
     {
         countryComboBox.SelectedIndex = 0;
         categoryComboBox.SelectedIndex = 0;
+        pexelsApiKeyTextBox.Text = Environment.GetEnvironmentVariable("PEXELS_API_KEY")
+            ?? Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.User)
+            ?? Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.Machine)
+            ?? string.Empty;
 
         trendsListBox.DataSource = _trendBindingSource;
         trendsListBox.DisplayMember = nameof(Trend.Title);
@@ -73,34 +68,46 @@ public partial class MainForm : Form
                 return;
             }
 
-            progressBar.Value = 15;
-            statusLabel.Text = "Przygotowuje scenariusz...";
+            var sourceText = sourceTextTextBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(sourceText))
+            {
+                MessageBox.Show(
+                    this,
+                    "Wklej material zrodlowy. Model ma pisac tylko na podstawie zrodla, nie samego tytulu.",
+                    "Brak materialu zrodlowego",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
 
-            var trend = GetSelectedTrend(topic);
-            var script = await _scriptService.GenerateScriptAsync(trend);
-            progressBar.Value = 35;
+            var selectedTopic = new SelectedTopic
+            {
+                Title = topic,
+                SourceText = sourceText,
+                SourceUrl = sourceUrlTextBox.Text.Trim()
+            };
 
-            statusLabel.Text = "Przygotowuje lektora...";
-            var outputRoot = Path.Combine(AppContext.BaseDirectory, "Output", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
-            var voiceOverPath = await _voiceService.GenerateVoiceOverAsync(script, outputRoot);
-            progressBar.Value = 50;
+            var options = new ShortGeneratorOptions
+            {
+                PexelsApiKey = pexelsApiKeyTextBox.Text.Trim()
+            };
 
-            statusLabel.Text = "Dobieram tlo...";
-            var background = await _stockVideoService.FindBackgroundAsync(trend);
-            progressBar.Value = 60;
+            progressBar.Value = 0;
+            statusLabel.Text = "Startuje generator...";
 
-            statusLabel.Text = "Renderuje short...";
-            var project = await _videoService.GenerateShortAsync(
-                trend,
-                script,
-                voiceOverPath,
-                background,
-                new Progress<int>(value => progressBar.Value = Math.Clamp(value, 0, 100)));
+            var outputPath = await _shortGenerator.GenerateAsync(
+                selectedTopic,
+                options,
+                new Progress<ShortGenerationProgress>(progress =>
+                {
+                    progressBar.Value = Math.Clamp(progress.Percent, 0, 100);
+                    statusLabel.Text = progress.Message;
+                }));
 
-            statusLabel.Text = $"Gotowe: {project.OutputPath}";
+            statusLabel.Text = $"Gotowe: {outputPath}";
             MessageBox.Show(
                 this,
-                $"Short zostal zapisany tutaj:{Environment.NewLine}{project.OutputPath}",
+                $"Short zostal zapisany tutaj:{Environment.NewLine}{outputPath}",
                 "Gotowe",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
@@ -121,6 +128,8 @@ public partial class MainForm : Form
             Country: countryComboBox.Text,
             Category: categoryComboBox.Text,
             Source: "Wpisane recznie",
+            SourceText: sourceTextTextBox.Text.Trim(),
+            SourceUrl: sourceUrlTextBox.Text.Trim(),
             DiscoveredAt: DateTimeOffset.Now);
     }
 
@@ -129,6 +138,8 @@ public partial class MainForm : Form
         if (trendsListBox.SelectedItem is Trend trend)
         {
             selectedTopicTextBox.Text = trend.Title;
+            sourceTextTextBox.Text = trend.SourceText;
+            sourceUrlTextBox.Text = trend.SourceUrl;
         }
     }
 
@@ -158,6 +169,9 @@ public partial class MainForm : Form
         countryComboBox.Enabled = enabled;
         categoryComboBox.Enabled = enabled;
         selectedTopicTextBox.Enabled = enabled;
+        sourceTextTextBox.Enabled = enabled;
+        sourceUrlTextBox.Enabled = enabled;
+        pexelsApiKeyTextBox.Enabled = enabled;
         trendsListBox.Enabled = enabled;
     }
 }

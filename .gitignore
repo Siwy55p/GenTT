@@ -10,3 +10,6 @@ TikTokGenerator/Output/*
 
 TikTokGenerator/Tools/*
 !TikTokGenerator/Tools/.gitkeep
+!TikTokGenerator/Tools/Piper/
+TikTokGenerator/Tools/Piper/*
+!TikTokGenerator/Tools/Piper/.gitkeep

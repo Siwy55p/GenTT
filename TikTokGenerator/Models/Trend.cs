@@ -6,6 +6,8 @@ public sealed record Trend(
     string Country,
     string Category,
     string Source,
+    string SourceText,
+    string SourceUrl,
     DateTimeOffset DiscoveredAt)
 {
     public override string ToString()

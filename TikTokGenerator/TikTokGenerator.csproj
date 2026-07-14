@@ -16,6 +16,7 @@
     <Content Include="Tools\ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Tools\ffmpeg.exe')" />
     <Content Include="Tools\ffplay.exe" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Tools\ffplay.exe')" />
     <Content Include="Tools\ffprobe.exe" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Tools\ffprobe.exe')" />
+    <Content Include="Tools\Piper\**\*.*" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Tools\Piper')" />
   </ItemGroup>
 
 </Project>

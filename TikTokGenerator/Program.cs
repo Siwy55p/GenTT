@@ -16,11 +16,13 @@ static class Program
         ApplicationConfiguration.Initialize();
         using var httpClient = new HttpClient();
 
+        var scriptService = new ScriptService(httpClient);
+        var voiceService = new VoiceService();
+        var stockVideoService = new StockVideoService(httpClient);
+        var videoService = new VideoService();
+
         Application.Run(new MainForm(
             new TrendService(httpClient),
-            new ScriptService(httpClient),
-            new VoiceService(httpClient),
-            new StockVideoService(httpClient),
-            new VideoService()));
+            new ShortGenerator(scriptService, voiceService, stockVideoService, videoService)));
     }    
 }

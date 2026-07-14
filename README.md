@@ -2,14 +2,18 @@
 
 Prosty MVP desktopowy w C# WinForms na .NET 10.
 
-## Co jest w pierwszej wersji
+## Pipeline MVP
 
-- Okno WinForms z krajem, kategoria, lista trendow i polem wybranego tematu.
-- Dwa glowne przyciski: `Znajdz popularne tematy` i `Wygeneruj short`.
-- Podzial logiki na osobne klasy w `Services`.
-- Modele `Trend` i `VideoProject`.
-- Zapis metadanych projektu do JSON.
-- Render MP4 przez FFmpeg, jezeli `ffmpeg.exe` jest dostepny.
+Przycisk `Wygeneruj short` wykonuje teraz jeden przeplyw:
+
+1. Ollama + `qwen3:4b` tworzy scenariusz JSON na podstawie materialu zrodlowego.
+2. Piper TTS tworzy osobne pliki WAV dla hooka, scen i zakonczenia.
+3. Pexels API pobiera pionowe klipy MP4 dla fraz `searchPhrase`.
+4. Program mierzy dlugosc WAV przez `ffprobe`.
+5. Program tworzy napisy jako przezroczyste obrazy PNG.
+6. FFmpeg sklada segmenty 1080x1920, 30 FPS, H.264/AAC do `short.mp4`.
+
+Nie ma jeszcze muzyki, publikowania ani generowania wideo przez AI.
 
 ## Uruchomienie
 
@@ -20,25 +24,88 @@ dotnet run --project .\TikTokGenerator\TikTokGenerator.csproj
 
 Mozesz tez otworzyc `TikTokGenerator.slnx` w Visual Studio.
 
-## FFmpeg
+## Wymagane narzedzia
 
-Aby przycisk `Wygeneruj short` mogl zapisac plik MP4, dodaj:
+### FFmpeg
+
+FFmpeg jest juz skonfigurowany lokalnie w:
 
 ```text
 TikTokGenerator/Tools/ffmpeg.exe
+TikTokGenerator/Tools/ffprobe.exe
+TikTokGenerator/Tools/ffplay.exe
 ```
 
-Alternatywnie zainstaluj FFmpeg globalnie tak, aby komenda `ffmpeg` byla dostepna w PATH.
+Projekt kopiuje te pliki do katalogu builda.
 
-## Playwright
+### Ollama
 
-Pakiet `Microsoft.Playwright` jest juz dodany do projektu. Gdy podlaczysz realne pobieranie z TikTok Creative Center, po buildzie zainstaluj przegladarki:
+Zainstaluj Ollama i pobierz model:
 
 ```powershell
-.\TikTokGenerator\bin\Debug\net10.0-windows\playwright.ps1 install
+ollama pull qwen3:4b
 ```
 
-Aktualnie `TrendService` dziala w trybie offline i zwraca przykladowe tematy, zeby MVP bylo uruchamialne bez logowania, kluczy API i dodatkowej konfiguracji.
+Program laczy sie z lokalnym API:
+
+```text
+http://localhost:11434/api/generate
+```
+
+### Piper TTS
+
+Dodaj `piper.exe` i polski model glosu do:
+
+```text
+TikTokGenerator/Tools/Piper/
+```
+
+Przykladowy uklad:
+
+```text
+TikTokGenerator/Tools/Piper/piper.exe
+TikTokGenerator/Tools/Piper/pl_PL-voice.onnx
+TikTokGenerator/Tools/Piper/pl_PL-voice.onnx.json
+```
+
+Mozesz tez ustawic sciezki globalnie:
+
+```powershell
+setx PIPER_EXE "C:\sciezka\do\piper.exe"
+setx PIPER_MODEL "C:\sciezka\do\polski-model.onnx"
+```
+
+Sprawdz licencje konkretnego modelu glosu w jego pliku `MODEL_CARD` lub dokumentacji modelu.
+
+### Pexels API
+
+W oknie programu mozna wpisac klucz Pexels API. Alternatywnie ustaw zmienna:
+
+```powershell
+setx PEXELS_API_KEY "twoj_klucz_pexels"
+```
+
+Po zmianie zmiennych srodowiskowych otworz nowe okno terminala lub uruchom ponownie Visual Studio.
+
+## Material zrodlowy
+
+Scenariusz nie jest generowany tylko z tytulu. Do generatora trafia:
+
+```csharp
+public class SelectedTopic
+{
+    public string Title { get; set; }
+    public string SourceText { get; set; }
+    public string SourceUrl { get; set; }
+}
+```
+
+Prompt wymusza:
+
+- pisanie wylacznie na podstawie `SourceText`,
+- brak dodawania faktow spoza zrodla,
+- maksymalnie okolo 25 sekund,
+- zwrot samego JSON-a.
 
 ## Struktura
 
@@ -48,14 +115,23 @@ TikTokGenerator/
 |   +-- MainForm.cs
 |   +-- MainForm.Designer.cs
 +-- Services/
+|   +-- ShortGenerator.cs
 |   +-- TrendService.cs
 |   +-- ScriptService.cs
 |   +-- VoiceService.cs
-|   +-- VideoService.cs
 |   +-- StockVideoService.cs
+|   +-- VideoService.cs
+|   +-- ToolLocator.cs
 +-- Models/
+|   +-- SelectedTopic.cs
+|   +-- ShortScript.cs
+|   +-- VoiceSegment.cs
+|   +-- DownloadedVideoClip.cs
+|   +-- ShortGenerationProgress.cs
+|   +-- ShortGeneratorOptions.cs
 |   +-- Trend.cs
 |   +-- VideoProject.cs
 +-- Tools/
+|   +-- Piper/
 +-- Output/
 ```

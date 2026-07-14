@@ -2,108 +2,148 @@ using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
-using System.Text.Json;
+using System.Globalization;
 using TikTokGenerator.Models;
 
 namespace TikTokGenerator.Services;
 
 public sealed class VideoService
 {
-    public async Task<VideoProject> GenerateShortAsync(
-        Trend trend,
-        string script,
-        string voiceOverPath,
-        string backgroundDescription,
-        IProgress<int>? progress = null,
+    public async Task<string> RenderVideoAsync(
+        ShortScript script,
+        IReadOnlyList<VoiceSegment> voiceSegments,
+        IReadOnlyList<DownloadedVideoClip> clips,
+        string projectDirectory,
+        IProgress<ShortGenerationProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var projectDirectory = Path.GetDirectoryName(voiceOverPath)
-            ?? Path.Combine(AppContext.BaseDirectory, "Output", SanitizeFileName($"{DateTime.Now:yyyyMMdd-HHmmss}-{trend.Title}"));
+        var ffmpegPath = ToolLocator.FindFfmpeg()
+            ?? throw new FileNotFoundException("Nie znaleziono FFmpeg. Dodaj ffmpeg.exe do Tools albo zainstaluj FFmpeg w PATH.");
+
         Directory.CreateDirectory(projectDirectory);
+        var subtitleDirectory = Path.Combine(projectDirectory, "subtitles");
+        var segmentDirectory = Path.Combine(projectDirectory, "segments");
+        Directory.CreateDirectory(subtitleDirectory);
+        Directory.CreateDirectory(segmentDirectory);
 
+        var segmentPaths = new List<string>();
+
+        for (var i = 0; i < voiceSegments.Count; i++)
+        {
+            var segment = voiceSegments[i];
+            var clip = clips.FirstOrDefault(item => item.SegmentIndex == segment.Index)
+                ?? throw new InvalidOperationException($"Brakuje klipu wideo dla segmentu {segment.Index}.");
+
+            progress?.Report(new ShortGenerationProgress(
+                70 + i * 20 / Math.Max(voiceSegments.Count, 1),
+                $"Montuje segment {i + 1}/{voiceSegments.Count}"));
+
+            var subtitlePath = Path.Combine(subtitleDirectory, $"{segment.Index:00}_{segment.Name}.png");
+            CreateSubtitleImage(segment.Text, subtitlePath);
+
+            var segmentPath = Path.Combine(segmentDirectory, $"{segment.Index:00}_{segment.Name}.mp4");
+            await RenderSegmentAsync(
+                ffmpegPath,
+                clip.FilePath,
+                segment.AudioPath,
+                subtitlePath,
+                segment.Duration,
+                segmentPath,
+                cancellationToken);
+
+            segmentPaths.Add(segmentPath);
+        }
+
+        progress?.Report(new ShortGenerationProgress(92, "Lacze segmenty"));
         var outputPath = Path.Combine(projectDirectory, "short.mp4");
-        var project = new VideoProject
-        {
-            Topic = trend.Title,
-            Country = trend.Country,
-            Category = trend.Category,
-            Script = script,
-            VoiceOverPath = voiceOverPath,
-            BackgroundDescription = backgroundDescription,
-            OutputPath = outputPath
-        };
+        await ConcatSegmentsAsync(ffmpegPath, segmentPaths, outputPath, cancellationToken);
 
-        progress?.Report(65);
+        progress?.Report(new ShortGenerationProgress(96, "Zapisuje metadane"));
+        await SaveCreditsAsync(script, clips, projectDirectory, cancellationToken);
 
-        var ffmpegPath = FindFfmpeg();
-        if (ffmpegPath is null)
-        {
-            await SaveProjectAsync(projectDirectory, project, cancellationToken);
-            throw new FileNotFoundException(
-                "Nie znaleziono FFmpeg. Dodaj ffmpeg.exe do katalogu Tools projektu albo zainstaluj FFmpeg w PATH.",
-                "ffmpeg.exe");
-        }
-
-        await RenderVideoAsync(ffmpegPath, project, cancellationToken);
-        progress?.Report(90);
-
-        await SaveProjectAsync(projectDirectory, project, cancellationToken);
-        progress?.Report(100);
-
-        return project;
+        progress?.Report(new ShortGenerationProgress(100, "Gotowe"));
+        return outputPath;
     }
 
-    private static string? FindFfmpeg()
-    {
-        var localPath = Path.Combine(AppContext.BaseDirectory, "Tools", "ffmpeg.exe");
-        if (File.Exists(localPath))
-        {
-            return localPath;
-        }
-
-        var sourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Tools", "ffmpeg.exe");
-        if (File.Exists(sourcePath))
-        {
-            return Path.GetFullPath(sourcePath);
-        }
-
-        return IsCommandAvailable("ffmpeg") ? "ffmpeg" : null;
-    }
-
-    private static bool IsCommandAvailable(string command)
-    {
-        try
-        {
-            using var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = command,
-                Arguments = "-version",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            });
-
-            process?.WaitForExit(2000);
-            return process is { HasExited: true, ExitCode: 0 };
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static async Task RenderVideoAsync(
+    private static async Task RenderSegmentAsync(
         string ffmpegPath,
-        VideoProject project,
+        string clipPath,
+        string audioPath,
+        string subtitlePath,
+        TimeSpan duration,
+        string outputPath,
         CancellationToken cancellationToken)
     {
-        var projectDirectory = Path.GetDirectoryName(project.OutputPath)
-            ?? AppContext.BaseDirectory;
-        var posterPath = Path.Combine(projectDirectory, "poster.png");
-        CreatePosterFrame(project, posterPath);
+        using var process = CreateFfmpegProcess(ffmpegPath);
+        var args = process.StartInfo.ArgumentList;
 
-        using var process = new Process
+        args.Add("-y");
+        args.Add("-stream_loop");
+        args.Add("-1");
+        args.Add("-i");
+        args.Add(clipPath);
+        args.Add("-i");
+        args.Add(audioPath);
+        args.Add("-loop");
+        args.Add("1");
+        args.Add("-i");
+        args.Add(subtitlePath);
+        args.Add("-t");
+        args.Add(duration.TotalSeconds.ToString("0.###", CultureInfo.InvariantCulture));
+        args.Add("-filter_complex");
+        args.Add("[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30[base];[base][2:v]overlay=0:0:format=auto[v]");
+        args.Add("-map");
+        args.Add("[v]");
+        args.Add("-map");
+        args.Add("1:a");
+        args.Add("-c:v");
+        args.Add("libx264");
+        args.Add("-preset");
+        args.Add("veryfast");
+        args.Add("-profile:v");
+        args.Add("high");
+        args.Add("-pix_fmt");
+        args.Add("yuv420p");
+        args.Add("-c:a");
+        args.Add("aac");
+        args.Add("-b:a");
+        args.Add("192k");
+        args.Add("-shortest");
+        args.Add(outputPath);
+
+        await RunProcessAsync(process, "FFmpeg nie wyrenderowal segmentu.", cancellationToken);
+    }
+
+    private static async Task ConcatSegmentsAsync(
+        string ffmpegPath,
+        IReadOnlyList<string> segmentPaths,
+        string outputPath,
+        CancellationToken cancellationToken)
+    {
+        var listPath = Path.Combine(Path.GetDirectoryName(outputPath) ?? AppContext.BaseDirectory, "concat.txt");
+        var lines = segmentPaths.Select(path => $"file '{EscapeConcatPath(path)}'");
+        await File.WriteAllLinesAsync(listPath, lines, cancellationToken);
+
+        using var process = CreateFfmpegProcess(ffmpegPath);
+        var args = process.StartInfo.ArgumentList;
+
+        args.Add("-y");
+        args.Add("-f");
+        args.Add("concat");
+        args.Add("-safe");
+        args.Add("0");
+        args.Add("-i");
+        args.Add(listPath);
+        args.Add("-c");
+        args.Add("copy");
+        args.Add(outputPath);
+
+        await RunProcessAsync(process, "FFmpeg nie polaczyl segmentow.", cancellationToken);
+    }
+
+    private static Process CreateFfmpegProcess(string ffmpegPath)
+    {
+        return new Process
         {
             StartInfo = new ProcessStartInfo
             {
@@ -114,117 +154,60 @@ public sealed class VideoService
                 RedirectStandardError = true
             }
         };
+    }
 
-        var args = process.StartInfo.ArgumentList;
-        args.Add("-y");
-        args.Add("-loop");
-        args.Add("1");
-        args.Add("-framerate");
-        args.Add("25");
-        args.Add("-i");
-        args.Add(posterPath);
-        args.Add("-f");
-        args.Add("lavfi");
-        args.Add("-i");
-        args.Add("anullsrc=channel_layout=stereo:sample_rate=44100");
-        args.Add("-t");
-        args.Add("18");
-        args.Add("-shortest");
-        args.Add("-c:v");
-        args.Add("libx264");
-        args.Add("-pix_fmt");
-        args.Add("yuv420p");
-        args.Add("-c:a");
-        args.Add("aac");
-        args.Add(project.OutputPath);
-
+    private static async Task RunProcessAsync(
+        Process process,
+        string errorMessage,
+        CancellationToken cancellationToken)
+    {
         process.Start();
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
         await process.WaitForExitAsync(cancellationToken);
+
+        var output = await outputTask;
+        var error = await errorTask;
 
         if (process.ExitCode != 0)
         {
-            throw new InvalidOperationException($"FFmpeg nie utworzyl pliku MP4. Szczegoly: {error}");
+            throw new InvalidOperationException($"{errorMessage} Output: {output} Error: {error}");
         }
     }
 
-    private static void CreatePosterFrame(VideoProject project, string posterPath)
+    private static void CreateSubtitleImage(string text, string outputPath)
     {
         const int width = 1080;
         const int height = 1920;
-        const int margin = 96;
 
         using var bitmap = new Bitmap(width, height);
         using var graphics = Graphics.FromImage(bitmap);
+        graphics.Clear(Color.Transparent);
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
         graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-        using var backgroundBrush = new LinearGradientBrush(
-            new Rectangle(0, 0, width, height),
-            Color.FromArgb(17, 24, 39),
-            Color.FromArgb(32, 41, 64),
-            LinearGradientMode.Vertical);
-        graphics.FillRectangle(backgroundBrush, 0, 0, width, height);
-
-        DrawAccentBars(graphics, width, height);
-        DrawTextPanel(graphics, project, width, height, margin);
-
-        bitmap.Save(posterPath, ImageFormat.Png);
-    }
-
-    private static void DrawAccentBars(Graphics graphics, int width, int height)
-    {
-        using var cyanPen = new Pen(Color.FromArgb(72, 209, 204), 10);
-        using var redPen = new Pen(Color.FromArgb(255, 65, 108), 10);
-        using var mutedPen = new Pen(Color.FromArgb(64, 82, 116), 4);
-
-        graphics.DrawLine(cyanPen, 80, 180, width - 80, 180);
-        graphics.DrawLine(redPen, 80, height - 180, width - 80, height - 180);
-
-        for (var i = 0; i < 8; i++)
+        var fontSize = text.Length > 120 ? 48 : 58;
+        using var font = new Font("Segoe UI", fontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var textBrush = new SolidBrush(Color.White);
+        using var shadowBrush = new SolidBrush(Color.FromArgb(215, 0, 0, 0));
+        using var borderPen = new Pen(Color.FromArgb(110, 255, 255, 255), 2);
+        using var format = new StringFormat
         {
-            var y = 360 + i * 145;
-            graphics.DrawLine(mutedPen, 120, y, width - 120, y);
-        }
-    }
+            Alignment = StringAlignment.Center,
+            LineAlignment = StringAlignment.Center,
+            Trimming = StringTrimming.Word
+        };
 
-    private static void DrawTextPanel(Graphics graphics, VideoProject project, int width, int height, int margin)
-    {
-        var panel = new RectangleF(margin, 470, width - margin * 2, height - 940);
-        using var panelPath = CreateRoundedRectangle(panel, 34);
-        using var panelBrush = new SolidBrush(Color.FromArgb(210, 0, 0, 0));
-        graphics.FillPath(panelBrush, panelPath);
+        var wrappedText = WrapText(text, 27);
+        var textArea = new RectangleF(90, 1270, 900, 360);
+        var panel = new RectangleF(70, 1235, 940, 430);
 
-        using var titleFont = new Font("Segoe UI", 66, FontStyle.Bold, GraphicsUnit.Pixel);
-        using var bodyFont = new Font("Segoe UI", 42, FontStyle.Regular, GraphicsUnit.Pixel);
-        using var metaFont = new Font("Segoe UI", 30, FontStyle.Bold, GraphicsUnit.Pixel);
-        using var titleBrush = new SolidBrush(Color.White);
-        using var bodyBrush = new SolidBrush(Color.FromArgb(230, 238, 247));
-        using var metaBrush = new SolidBrush(Color.FromArgb(72, 209, 204));
+        using var panelPath = CreateRoundedRectangle(panel, 36);
+        graphics.FillPath(shadowBrush, panelPath);
+        graphics.DrawPath(borderPen, panelPath);
+        graphics.DrawString(wrappedText, font, textBrush, textArea, format);
 
-        using var titleFormat = CreateTextFormat();
-        using var bodyFormat = CreateTextFormat();
-
-        graphics.DrawString(
-            project.Category.ToUpperInvariant(),
-            metaFont,
-            metaBrush,
-            new RectangleF(margin + 48, 525, width - margin * 2 - 96, 50),
-            titleFormat);
-
-        graphics.DrawString(
-            WrapText(project.Topic, 22),
-            titleFont,
-            titleBrush,
-            new RectangleF(margin + 48, 610, width - margin * 2 - 96, 330),
-            titleFormat);
-
-        graphics.DrawString(
-            CreateShortCaption(project.Script),
-            bodyFont,
-            bodyBrush,
-            new RectangleF(margin + 48, 970, width - margin * 2 - 96, 430),
-            bodyFormat);
+        bitmap.Save(outputPath, ImageFormat.Png);
     }
 
     private static GraphicsPath CreateRoundedRectangle(RectangleF bounds, float radius)
@@ -245,41 +228,22 @@ public sealed class VideoService
         return path;
     }
 
-    private static StringFormat CreateTextFormat()
-    {
-        return new StringFormat
-        {
-            Alignment = StringAlignment.Near,
-            LineAlignment = StringAlignment.Near,
-            Trimming = StringTrimming.Word
-        };
-    }
-
-    private static async Task SaveProjectAsync(
+    private static async Task SaveCreditsAsync(
+        ShortScript script,
+        IReadOnlyList<DownloadedVideoClip> clips,
         string projectDirectory,
-        VideoProject project,
         CancellationToken cancellationToken)
     {
-        var jsonPath = Path.Combine(projectDirectory, "project.json");
-        var json = JsonSerializer.Serialize(project, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(jsonPath, json, cancellationToken);
-    }
+        var creditsPath = Path.Combine(projectDirectory, "credits.txt");
+        var lines = new List<string>
+        {
+            $"Title: {script.Title}",
+            "Video clips provided by Pexels:",
+            string.Empty
+        };
 
-    private static string CreateShortCaption(string script)
-    {
-        var lines = script
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(line => !line.StartsWith("Hook:", StringComparison.OrdinalIgnoreCase))
-            .Take(3);
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    private static string SanitizeFileName(string value)
-    {
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var sanitized = new string(value.Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray());
-        return sanitized.Length > 80 ? sanitized[..80] : sanitized;
+        lines.AddRange(clips.Select(clip => $"{clip.AuthorName} - {clip.PexelsUrl}"));
+        await File.WriteAllLinesAsync(creditsPath, lines, cancellationToken);
     }
 
     private static string WrapText(string text, int maxLineLength)
@@ -312,6 +276,11 @@ public sealed class VideoService
             lines.Add(currentLine);
         }
 
-        return string.Join(Environment.NewLine, lines);
+        return string.Join(Environment.NewLine, lines.Take(5));
+    }
+
+    private static string EscapeConcatPath(string path)
+    {
+        return path.Replace("\\", "/", StringComparison.Ordinal).Replace("'", "'\\''", StringComparison.Ordinal);
     }
 }

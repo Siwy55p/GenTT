@@ -13,6 +13,12 @@ partial class MainForm
     private ListBox trendsListBox;
     private Label selectedTopicLabel;
     private TextBox selectedTopicTextBox;
+    private Label sourceUrlLabel;
+    private TextBox sourceUrlTextBox;
+    private Label sourceTextLabel;
+    private TextBox sourceTextTextBox;
+    private Label pexelsApiKeyLabel;
+    private TextBox pexelsApiKeyTextBox;
     private Button generateShortButton;
     private Label progressLabel;
     private ProgressBar progressBar;
@@ -42,6 +48,12 @@ partial class MainForm
         trendsListBox = new ListBox();
         selectedTopicLabel = new Label();
         selectedTopicTextBox = new TextBox();
+        sourceUrlLabel = new Label();
+        sourceUrlTextBox = new TextBox();
+        sourceTextLabel = new Label();
+        sourceTextTextBox = new TextBox();
+        pexelsApiKeyLabel = new Label();
+        pexelsApiKeyTextBox = new TextBox();
         generateShortButton = new Button();
         progressLabel = new Label();
         progressBar = new ProgressBar();
@@ -52,7 +64,7 @@ partial class MainForm
         // rootLayout
         // 
         rootLayout.ColumnCount = 2;
-        rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130F));
+        rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F));
         rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         rootLayout.Controls.Add(titleLabel, 0, 0);
         rootLayout.Controls.Add(countryLabel, 0, 1);
@@ -63,25 +75,34 @@ partial class MainForm
         rootLayout.Controls.Add(trendsListBox, 1, 4);
         rootLayout.Controls.Add(selectedTopicLabel, 0, 5);
         rootLayout.Controls.Add(selectedTopicTextBox, 1, 5);
-        rootLayout.Controls.Add(generateShortButton, 1, 6);
-        rootLayout.Controls.Add(progressLabel, 0, 7);
-        rootLayout.Controls.Add(progressBar, 1, 7);
-        rootLayout.Controls.Add(statusLabel, 1, 8);
+        rootLayout.Controls.Add(sourceUrlLabel, 0, 6);
+        rootLayout.Controls.Add(sourceUrlTextBox, 1, 6);
+        rootLayout.Controls.Add(sourceTextLabel, 0, 7);
+        rootLayout.Controls.Add(sourceTextTextBox, 1, 7);
+        rootLayout.Controls.Add(pexelsApiKeyLabel, 0, 8);
+        rootLayout.Controls.Add(pexelsApiKeyTextBox, 1, 8);
+        rootLayout.Controls.Add(generateShortButton, 1, 9);
+        rootLayout.Controls.Add(progressLabel, 0, 10);
+        rootLayout.Controls.Add(progressBar, 1, 10);
+        rootLayout.Controls.Add(statusLabel, 1, 11);
         rootLayout.Dock = DockStyle.Fill;
         rootLayout.Location = new Point(0, 0);
         rootLayout.Name = "rootLayout";
         rootLayout.Padding = new Padding(24);
-        rootLayout.RowCount = 9;
+        rootLayout.RowCount = 12;
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+        rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+        rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 128F));
+        rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
-        rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
-        rootLayout.Size = new Size(620, 560);
+        rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
+        rootLayout.Size = new Size(760, 720);
         rootLayout.TabIndex = 0;
         // 
         // titleLabel
@@ -92,7 +113,7 @@ partial class MainForm
         titleLabel.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
         titleLabel.Location = new Point(27, 24);
         titleLabel.Name = "titleLabel";
-        titleLabel.Size = new Size(566, 52);
+        titleLabel.Size = new Size(706, 52);
         titleLabel.TabIndex = 0;
         titleLabel.Text = "Generator TikTokow";
         titleLabel.TextAlign = ContentAlignment.MiddleLeft;
@@ -103,7 +124,7 @@ partial class MainForm
         countryLabel.Dock = DockStyle.Fill;
         countryLabel.Location = new Point(27, 76);
         countryLabel.Name = "countryLabel";
-        countryLabel.Size = new Size(124, 42);
+        countryLabel.Size = new Size(144, 42);
         countryLabel.TabIndex = 1;
         countryLabel.Text = "Kraj:";
         countryLabel.TextAlign = ContentAlignment.MiddleLeft;
@@ -114,9 +135,9 @@ partial class MainForm
         countryComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
         countryComboBox.FormattingEnabled = true;
         countryComboBox.Items.AddRange(new object[] { "Polska", "USA", "Niemcy", "Wielka Brytania" });
-        countryComboBox.Location = new Point(157, 79);
+        countryComboBox.Location = new Point(177, 79);
         countryComboBox.Name = "countryComboBox";
-        countryComboBox.Size = new Size(436, 33);
+        countryComboBox.Size = new Size(556, 33);
         countryComboBox.TabIndex = 2;
         // 
         // categoryLabel
@@ -125,7 +146,7 @@ partial class MainForm
         categoryLabel.Dock = DockStyle.Fill;
         categoryLabel.Location = new Point(27, 118);
         categoryLabel.Name = "categoryLabel";
-        categoryLabel.Size = new Size(124, 42);
+        categoryLabel.Size = new Size(144, 42);
         categoryLabel.TabIndex = 3;
         categoryLabel.Text = "Kategoria:";
         categoryLabel.TextAlign = ContentAlignment.MiddleLeft;
@@ -136,16 +157,16 @@ partial class MainForm
         categoryComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
         categoryComboBox.FormattingEnabled = true;
         categoryComboBox.Items.AddRange(new object[] { "Technologia", "Biznes", "Lifestyle", "Edukacja" });
-        categoryComboBox.Location = new Point(157, 121);
+        categoryComboBox.Location = new Point(177, 121);
         categoryComboBox.Name = "categoryComboBox";
-        categoryComboBox.Size = new Size(436, 33);
+        categoryComboBox.Size = new Size(556, 33);
         categoryComboBox.TabIndex = 4;
         // 
         // findTrendsButton
         // 
         findTrendsButton.AutoSize = true;
         findTrendsButton.Dock = DockStyle.Left;
-        findTrendsButton.Location = new Point(157, 171);
+        findTrendsButton.Location = new Point(177, 171);
         findTrendsButton.Margin = new Padding(3, 11, 3, 8);
         findTrendsButton.Name = "findTrendsButton";
         findTrendsButton.Size = new Size(197, 33);
@@ -159,18 +180,18 @@ partial class MainForm
         trendsListBox.Dock = DockStyle.Fill;
         trendsListBox.FormattingEnabled = true;
         trendsListBox.ItemHeight = 25;
-        trendsListBox.Location = new Point(157, 215);
+        trendsListBox.Location = new Point(177, 215);
         trendsListBox.Name = "trendsListBox";
-        trendsListBox.Size = new Size(436, 150);
+        trendsListBox.Size = new Size(556, 119);
         trendsListBox.TabIndex = 6;
         // 
         // selectedTopicLabel
         // 
         selectedTopicLabel.AutoSize = true;
         selectedTopicLabel.Dock = DockStyle.Fill;
-        selectedTopicLabel.Location = new Point(27, 368);
+        selectedTopicLabel.Location = new Point(27, 340);
         selectedTopicLabel.Name = "selectedTopicLabel";
-        selectedTopicLabel.Size = new Size(124, 42);
+        selectedTopicLabel.Size = new Size(144, 42);
         selectedTopicLabel.TabIndex = 7;
         selectedTopicLabel.Text = "Wybrany temat:";
         selectedTopicLabel.TextAlign = ContentAlignment.MiddleLeft;
@@ -178,21 +199,85 @@ partial class MainForm
         // selectedTopicTextBox
         // 
         selectedTopicTextBox.Dock = DockStyle.Fill;
-        selectedTopicTextBox.Location = new Point(157, 373);
+        selectedTopicTextBox.Location = new Point(177, 345);
         selectedTopicTextBox.Margin = new Padding(3, 5, 3, 3);
         selectedTopicTextBox.Name = "selectedTopicTextBox";
-        selectedTopicTextBox.Size = new Size(436, 31);
+        selectedTopicTextBox.Size = new Size(556, 31);
         selectedTopicTextBox.TabIndex = 8;
+        // 
+        // sourceUrlLabel
+        // 
+        sourceUrlLabel.AutoSize = true;
+        sourceUrlLabel.Dock = DockStyle.Fill;
+        sourceUrlLabel.Location = new Point(27, 382);
+        sourceUrlLabel.Name = "sourceUrlLabel";
+        sourceUrlLabel.Size = new Size(144, 42);
+        sourceUrlLabel.TabIndex = 9;
+        sourceUrlLabel.Text = "URL zrodla:";
+        sourceUrlLabel.TextAlign = ContentAlignment.MiddleLeft;
+        // 
+        // sourceUrlTextBox
+        // 
+        sourceUrlTextBox.Dock = DockStyle.Fill;
+        sourceUrlTextBox.Location = new Point(177, 387);
+        sourceUrlTextBox.Margin = new Padding(3, 5, 3, 3);
+        sourceUrlTextBox.Name = "sourceUrlTextBox";
+        sourceUrlTextBox.Size = new Size(556, 31);
+        sourceUrlTextBox.TabIndex = 10;
+        // 
+        // sourceTextLabel
+        // 
+        sourceTextLabel.AutoSize = true;
+        sourceTextLabel.Dock = DockStyle.Fill;
+        sourceTextLabel.Location = new Point(27, 424);
+        sourceTextLabel.Name = "sourceTextLabel";
+        sourceTextLabel.Size = new Size(144, 128);
+        sourceTextLabel.TabIndex = 11;
+        sourceTextLabel.Text = "Material zrodlowy:";
+        sourceTextLabel.TextAlign = ContentAlignment.MiddleLeft;
+        // 
+        // sourceTextTextBox
+        // 
+        sourceTextTextBox.AcceptsReturn = true;
+        sourceTextTextBox.Dock = DockStyle.Fill;
+        sourceTextTextBox.Location = new Point(177, 429);
+        sourceTextTextBox.Margin = new Padding(3, 5, 3, 5);
+        sourceTextTextBox.Multiline = true;
+        sourceTextTextBox.Name = "sourceTextTextBox";
+        sourceTextTextBox.ScrollBars = ScrollBars.Vertical;
+        sourceTextTextBox.Size = new Size(556, 118);
+        sourceTextTextBox.TabIndex = 12;
+        // 
+        // pexelsApiKeyLabel
+        // 
+        pexelsApiKeyLabel.AutoSize = true;
+        pexelsApiKeyLabel.Dock = DockStyle.Fill;
+        pexelsApiKeyLabel.Location = new Point(27, 552);
+        pexelsApiKeyLabel.Name = "pexelsApiKeyLabel";
+        pexelsApiKeyLabel.Size = new Size(144, 42);
+        pexelsApiKeyLabel.TabIndex = 13;
+        pexelsApiKeyLabel.Text = "Pexels API:";
+        pexelsApiKeyLabel.TextAlign = ContentAlignment.MiddleLeft;
+        // 
+        // pexelsApiKeyTextBox
+        // 
+        pexelsApiKeyTextBox.Dock = DockStyle.Fill;
+        pexelsApiKeyTextBox.Location = new Point(177, 557);
+        pexelsApiKeyTextBox.Margin = new Padding(3, 5, 3, 3);
+        pexelsApiKeyTextBox.Name = "pexelsApiKeyTextBox";
+        pexelsApiKeyTextBox.PasswordChar = '*';
+        pexelsApiKeyTextBox.Size = new Size(556, 31);
+        pexelsApiKeyTextBox.TabIndex = 14;
         // 
         // generateShortButton
         // 
         generateShortButton.AutoSize = true;
         generateShortButton.Dock = DockStyle.Left;
-        generateShortButton.Location = new Point(157, 421);
+        generateShortButton.Location = new Point(177, 605);
         generateShortButton.Margin = new Padding(3, 11, 3, 8);
         generateShortButton.Name = "generateShortButton";
         generateShortButton.Size = new Size(139, 33);
-        generateShortButton.TabIndex = 9;
+        generateShortButton.TabIndex = 15;
         generateShortButton.Text = "Wygeneruj short";
         generateShortButton.UseVisualStyleBackColor = true;
         generateShortButton.Click += generateShortButton_Click;
@@ -201,30 +286,30 @@ partial class MainForm
         // 
         progressLabel.AutoSize = true;
         progressLabel.Dock = DockStyle.Fill;
-        progressLabel.Location = new Point(27, 462);
+        progressLabel.Location = new Point(27, 646);
         progressLabel.Name = "progressLabel";
-        progressLabel.Size = new Size(124, 42);
-        progressLabel.TabIndex = 10;
+        progressLabel.Size = new Size(144, 42);
+        progressLabel.TabIndex = 16;
         progressLabel.Text = "Postep:";
         progressLabel.TextAlign = ContentAlignment.MiddleLeft;
         // 
         // progressBar
         // 
         progressBar.Dock = DockStyle.Fill;
-        progressBar.Location = new Point(157, 471);
+        progressBar.Location = new Point(177, 655);
         progressBar.Margin = new Padding(3, 9, 3, 9);
         progressBar.Name = "progressBar";
-        progressBar.Size = new Size(436, 24);
-        progressBar.TabIndex = 11;
+        progressBar.Size = new Size(556, 24);
+        progressBar.TabIndex = 17;
         // 
         // statusLabel
         // 
         statusLabel.AutoEllipsis = true;
         statusLabel.Dock = DockStyle.Fill;
-        statusLabel.Location = new Point(157, 504);
+        statusLabel.Location = new Point(177, 688);
         statusLabel.Name = "statusLabel";
-        statusLabel.Size = new Size(436, 42);
-        statusLabel.TabIndex = 12;
+        statusLabel.Size = new Size(556, 44);
+        statusLabel.TabIndex = 18;
         statusLabel.Text = "Gotowe do pracy.";
         statusLabel.TextAlign = ContentAlignment.MiddleLeft;
         // 
@@ -232,10 +317,10 @@ partial class MainForm
         // 
         AutoScaleDimensions = new SizeF(10F, 25F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(620, 560);
+        ClientSize = new Size(760, 720);
         Controls.Add(rootLayout);
         Font = new Font("Segoe UI", 10.5F);
-        MinimumSize = new Size(560, 500);
+        MinimumSize = new Size(720, 640);
         Name = "MainForm";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "Generator TikTokow";
