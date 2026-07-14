@@ -99,6 +99,37 @@ public sealed class PipelineQualityRegressionTests
     }
 
     [Fact]
+    public void EvaluateBeforeRender_WhenReviewerSaysHookNotMet_ReducesHookPayoffScore()
+    {
+        var topic = CreateMorningTopic();
+        var analysis = CreateMorningAnalysis();
+        var script = CreateMorningScript(payoff: "Zapisz jeden priorytet, jedno male zadanie i jedna rzecz, ktorej dzis nie robisz.");
+        var review = CreateApprovedReview();
+        review.Issues.Add(new ContentReviewIssue
+        {
+            Severity = "warning",
+            Segment = "hook",
+            Code = "hookNotMet",
+            Message = "Hook nie jest spelniony przez payoff.",
+            SuggestedFix = "Dopasuj payoff do hooka."
+        });
+        review.PromiseCheck = "Obietnica hooka nie jest spelniona.";
+
+        var report = QualityGateService.EvaluateBeforeRender(
+            topic,
+            analysis,
+            script,
+            review,
+            CreateGoodVisualPlan(),
+            CreateVoiceSegments(script),
+            CreateClips());
+
+        var hookCriterion = Assert.Single(report.Criteria, criterion => criterion.Name == "Hook zgodny z payoffem");
+        Assert.Equal(3, hookCriterion.Points);
+        Assert.False(report.Passed);
+    }
+
+    [Fact]
     public void EvaluateBeforeRender_WhenSourceAnalysisContainsUnsupportedExample_BlocksRender()
     {
         var topic = CreateMorningTopic();

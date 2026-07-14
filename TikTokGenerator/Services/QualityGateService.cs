@@ -128,7 +128,7 @@ public static class QualityGateService
 
     private static int ScoreHookPayoff(ShortScript script, ContentReview review)
     {
-        if (review.Issues.Any(issue => issue.Code.Contains("promise", StringComparison.OrdinalIgnoreCase)))
+        if (HasPromiseProblem(review))
         {
             return 3;
         }
@@ -224,9 +224,18 @@ public static class QualityGateService
             AddIssue(report, "error", "unsupported_payoff", "Payoff lub zakonczenie zawiera konkretny wynik/przyklad, ktorego nie ma w materiale zrodlowym.");
         }
 
-        if (review.HasCriticalErrors || !review.Approved)
+        if (HasPromiseProblem(review))
+        {
+            AddIssue(report, "error", "promise_not_met", "Payoff nie spelnia obietnicy hooka wedlug recenzji merytorycznej.");
+        }
+
+        if (review.HasCriticalErrors)
         {
             AddIssue(report, "error", "review_not_approved", "Recenzent merytoryczny nie zatwierdzil scenariusza.");
+        }
+        else if (!review.Approved)
+        {
+            AddIssue(report, "warning", "review_not_approved", "Recenzent merytoryczny oznaczyl scenariusz jako niezatwierdzony, ale nie wskazal bledu krytycznego.");
         }
 
         foreach (var scene in script.Scenes.Select((value, index) => new { value, index }))
@@ -305,6 +314,26 @@ public static class QualityGateService
         }
 
         return false;
+    }
+
+    private static bool HasPromiseProblem(ContentReview review)
+    {
+        if (review.Issues.Any(issue =>
+            issue.Code.Contains("promise", StringComparison.OrdinalIgnoreCase)
+            || issue.Code.Contains("hooknotmet", StringComparison.OrdinalIgnoreCase)
+            || issue.Code.Contains("hook_not_met", StringComparison.OrdinalIgnoreCase)
+            || (issue.Code.Contains("hook", StringComparison.OrdinalIgnoreCase)
+                && issue.Code.Contains("mismatch", StringComparison.OrdinalIgnoreCase))))
+        {
+            return true;
+        }
+
+        var text = Normalize($"{review.PromiseCheck} {string.Join(" ", review.Issues.Select(issue => $"{issue.Code} {issue.Message}"))}");
+        return text.Contains("not met", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("notmet", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("nie jest spe", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("niespeln", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("niespełn", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasTopicBriefDrift(SelectedTopic topic, ShortScript script)

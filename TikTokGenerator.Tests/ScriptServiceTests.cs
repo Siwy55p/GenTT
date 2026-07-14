@@ -202,6 +202,75 @@ public sealed class ScriptServiceTests
         Assert.Contains(report.Issues, issue => issue.Code == "unsupported_statistic");
     }
 
+    [Fact]
+    public void RepairScriptAfterReview_WhenHookPayoffIsRejected_UsesSourceStepsAsEnding()
+    {
+        var service = new ScriptService(new HttpClient());
+        var topic = new SelectedTopic
+        {
+            Title = "Poranny rytual, ktory zmienia tempo dnia",
+            SourceUrl = "offline://test",
+            SourceText = "Praktyczna teza: jedna minuta planowania rano moze ograniczyc chaos na starcie dnia. Konkretne kroki: zapisz jeden priorytet, jedno male zadanie do zrobienia od razu oraz jedna rzecz, ktorej dzis swiadomie nie robisz."
+        };
+        var analysis = new SourceAnalysis
+        {
+            MainThesis = "jedna minuta planowania rano moze ograniczyc chaos na starcie dnia",
+            Facts =
+            [
+                new SourceFact { Id = "F1", Text = "jedna minuta planowania rano moze ograniczyc chaos na starcie dnia", Evidence = "Praktyczna teza" }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "zapisz jeden priorytet", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S2", Text = "zapisz jedno male zadanie do zrobienia od razu", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S3", Text = "zapisz jedna rzecz, ktorej dzis swiadomie nie robisz", SourceFactIds = ["F1"] }
+            ],
+            MostUsefulFragment = "jedna minuta planowania rano moze ograniczyc chaos na starcie dnia"
+        };
+        var script = new ShortScript
+        {
+            Title = "Jedna minuta, jedna czynnosc",
+            Hook = "Jak szybko zaczac planowac rano?",
+            HookOnScreenText = "Jak szybko zaczac planowac rano?",
+            Ending = "Jedna minuta planowania rano ogranicza chaos.",
+            EndingOnScreenText = "Jedna minuta planowania",
+            Scenes =
+            [
+                new ScriptScene { Role = "problem", VoiceOver = "Zaczynasz dzien z chaosem?", SourceFactIds = ["F1"], NewInformation = "Zaczynasz dzien z chaosem?", OnScreenText = "Chaos", SearchPhrase = "person turning off morning alarm clock" },
+                new ScriptScene { Role = "mechanism", VoiceOver = "Wystarczy jedna minuta.", SourceFactIds = ["F1"], NewInformation = "Wystarczy jedna minuta.", OnScreenText = "1 minuta", SearchPhrase = "person turning off morning alarm clock" },
+                new ScriptScene { Role = "action", VoiceOver = "Zapisz jeden priorytet.", SourceFactIds = ["F1"], NewInformation = "Zapisz jeden priorytet.", OnScreenText = "Priorytet", SearchPhrase = "person turning off morning alarm clock" },
+                new ScriptScene { Role = "proof", VoiceOver = "Zapisz jedno male zadanie.", SourceFactIds = ["F1"], NewInformation = "Zapisz jedno male zadanie.", OnScreenText = "Zadanie", SearchPhrase = "person turning off morning alarm clock" },
+                new ScriptScene { Role = "payoff", VoiceOver = "Zapisz jedna rzecz, ktorej dzisiaj nie robisz.", SourceFactIds = ["F1"], NewInformation = "Zapisz jedna rzecz, ktorej dzisiaj nie robisz.", OnScreenText = "Nie robisz", SearchPhrase = "person turning off morning alarm clock" }
+            ]
+        };
+        var review = new ContentReview
+        {
+            Approved = false,
+            PromiseCheck = "Obietnica hooka nie jest spelniona.",
+            Issues =
+            [
+                new ContentReviewIssue
+                {
+                    Severity = "warning",
+                    Segment = "hook",
+                    Code = "hookNotMet",
+                    Message = "Hook nie jest spelniony przez payoff.",
+                    SuggestedFix = "Zmien payoff na trzy kroki ze zrodla."
+                }
+            ]
+        };
+
+        var repaired = service.RepairScriptAfterReview(topic, analysis, script, review);
+
+        Assert.Equal("Jak zaplanowac poranek w 1 minute?", repaired.Hook);
+        Assert.Contains("jeden priorytet", repaired.Ending, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("jedno male zadanie", repaired.Ending, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("jedna rzecz", repaired.Ending, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Pierwszy element planu", repaired.Scenes[2].NewInformation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("notebook", repaired.Scenes[2].SearchPhrase, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("notebook", repaired.Scenes[4].SearchPhrase, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static SelectedTopic CreateTopic()
     {
         return new SelectedTopic

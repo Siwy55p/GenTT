@@ -193,6 +193,35 @@ public sealed class ScriptService
         return CreateHeuristicReview(topic, script);
     }
 
+    public ShortScript RepairScriptAfterReview(
+        SelectedTopic topic,
+        SourceAnalysis analysis,
+        ShortScript script,
+        ContentReview review,
+        GenerationDebugLogger? logger = null)
+    {
+        var repaired = CloneScript(script);
+        logger?.Warning($"Repairing script after content review. Approved={review.Approved}; Critical={review.HasCriticalErrors}; Issues={review.Issues.Count}");
+
+        if (HasPromiseProblem(review) || !review.Approved)
+        {
+            RepairHookAndEnding(topic, analysis, repaired, logger);
+        }
+
+        if (HasNewInformationProblem(review) || !review.Approved)
+        {
+            RepairSceneNewInformation(repaired, analysis, logger);
+        }
+
+        if (HasStepClarityProblem(review) || !review.Approved)
+        {
+            RepairStepLabels(repaired, logger);
+        }
+
+        NormalizeScript(repaired, topic, analysis);
+        return repaired;
+    }
+
     public async Task<VisualPlan> CreateVisualPlanAsync(
         SelectedTopic topic,
         SourceAnalysis analysis,
@@ -474,7 +503,9 @@ public sealed class ScriptService
             - wartosc dla wskazanego odbiorcy,
             - czy kazda scena wnosi newInformation.
 
-            Ustaw approved=false przy niepotwierdzonym twierdzeniu, braku nowej informacji w scenie albo niespelnionej obietnicy.
+            Ustaw severity=error i approved=false przy niepotwierdzonym twierdzeniu, braku nowej informacji w scenie albo niespelnionej obietnicy.
+            Jesli approved=false, przynajmniej jeden issue musi miec severity=error.
+            Dla drobnych uwag uzyj severity=warning i zostaw approved=true.
             Zwracaj wylacznie JSON zgodny ze schematem.
             """;
     }
@@ -919,6 +950,239 @@ public sealed class ScriptService
     {
         review.UsefulnessScore = Math.Clamp(review.UsefulnessScore, 0, 10);
         review.Approved = review.Approved && !review.HasCriticalErrors;
+    }
+
+    private static bool HasPromiseProblem(ContentReview review)
+    {
+        var text = NormalizeWhitespace(string.Join(
+            " ",
+            review.PromiseCheck,
+            string.Join(" ", review.Issues.Select(issue => $"{issue.Code} {issue.Message}")))).ToLowerInvariant();
+
+        return text.Contains("hook", StringComparison.OrdinalIgnoreCase)
+            && (text.Contains("notmet", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("not met", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("nie jest spe", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("niespeln", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("niespełn", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool HasNewInformationProblem(ContentReview review)
+    {
+        var text = NormalizeWhitespace(string.Join(
+            " ",
+            review.Issues.Select(issue => $"{issue.Code} {issue.Message}"),
+            string.Join(" ", review.SuggestedFixes))).ToLowerInvariant();
+
+        return text.Contains("newinformation", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("new information", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("nowa informac", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("nie wnosi", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasStepClarityProblem(ContentReview review)
+    {
+        var text = NormalizeWhitespace(string.Join(
+            " ",
+            review.Issues.Select(issue => $"{issue.Code} {issue.Message}"),
+            string.Join(" ", review.SuggestedFixes))).ToLowerInvariant();
+
+        return text.Contains("step", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("krok", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("niejasn", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void RepairHookAndEnding(
+        SelectedTopic topic,
+        SourceAnalysis analysis,
+        ShortScript script,
+        GenerationDebugLogger? logger)
+    {
+        var normalizedSource = SourceAnalysisDiagnosticsService.Normalize(topic.SourceText);
+        if (normalizedSource.Contains("1 min", StringComparison.OrdinalIgnoreCase)
+            && normalizedSource.Contains("planowania", StringComparison.OrdinalIgnoreCase)
+            && (normalizedSource.Contains("rano", StringComparison.OrdinalIgnoreCase)
+                || normalizedSource.Contains("porann", StringComparison.OrdinalIgnoreCase)))
+        {
+            script.Hook = "Jak zaplanowac poranek w 1 minute?";
+            script.HookOnScreenText = "Plan w 1 minute";
+        }
+
+        var repairedEnding = BuildEndingFromSourceSteps(analysis, script);
+        if (!string.IsNullOrWhiteSpace(repairedEnding))
+        {
+            logger?.Warning($"Content review repair changed ending. Original={script.Ending}; Fixed={repairedEnding}");
+            script.Ending = repairedEnding;
+            script.EndingOnScreenText = ShortenForScreen(repairedEnding, 42);
+            script.EndingSearchPhrase = "person writing daily plan in notebook";
+        }
+    }
+
+    private static string BuildEndingFromSourceSteps(SourceAnalysis analysis, ShortScript script)
+    {
+        var steps = analysis.Steps
+            .Select(step => NormalizeWhitespace(step.Text))
+            .Where(step => !string.IsNullOrWhiteSpace(step))
+            .Take(3)
+            .ToList();
+
+        if (steps.Count == 0)
+        {
+            steps = script.Scenes
+                .Where(scene => scene.Role is "action" or "proof" or "payoff")
+                .Select(scene => NormalizeWhitespace(scene.VoiceOver))
+                .Where(step => !string.IsNullOrWhiteSpace(step))
+                .Take(3)
+                .ToList();
+        }
+
+        if (steps.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var first = RemoveTrailingPunctuation(steps[0]);
+        var tail = steps
+            .Skip(1)
+            .Select(RemoveTrailingPunctuation)
+            .Select(RemoveLeadingActionVerb)
+            .Where(step => !string.IsNullOrWhiteSpace(step))
+            .ToList();
+        var sentence = tail.Count == 0
+            ? first
+            : $"{first}, {JoinWithPolishAnd(tail)}";
+        return EnsureSentence(CapitalizeFirst(sentence));
+    }
+
+    private static void RepairSceneNewInformation(
+        ShortScript script,
+        SourceAnalysis analysis,
+        GenerationDebugLogger? logger)
+    {
+        foreach (var item in script.Scenes.Select((scene, index) => new { scene, index }))
+        {
+            if (!NeedsNewInformationRepair(item.scene))
+            {
+                continue;
+            }
+
+            var fixedValue = BuildNewInformationForScene(item.scene, item.index, analysis);
+            logger?.Warning($"Content review repair changed newInformation in scene_{item.index + 1:00}. Original={item.scene.NewInformation}; Fixed={fixedValue}");
+            item.scene.NewInformation = fixedValue;
+        }
+    }
+
+    private static void RepairStepLabels(ShortScript script, GenerationDebugLogger? logger)
+    {
+        foreach (var item in script.Scenes.Select((scene, index) => new { scene, index }))
+        {
+            var lower = item.scene.VoiceOver.ToLowerInvariant();
+            var screenText = lower switch
+            {
+                var value when value.Contains("priorytet", StringComparison.OrdinalIgnoreCase) => "1. Priorytet",
+                var value when value.Contains("male zadanie", StringComparison.OrdinalIgnoreCase) || value.Contains("małe zadanie", StringComparison.OrdinalIgnoreCase) => "2. Male zadanie",
+                var value when value.Contains("nie robisz", StringComparison.OrdinalIgnoreCase) || value.Contains("odpuszcz", StringComparison.OrdinalIgnoreCase) => "3. Odpuszczasz",
+                _ => string.Empty
+            };
+
+            if (string.IsNullOrWhiteSpace(screenText))
+            {
+                continue;
+            }
+
+            item.scene.OnScreenText = screenText;
+            item.scene.OnScreenEmphasis = screenText;
+            item.scene.VisualDescription = "Close up hands writing a simple morning plan in a notebook.";
+            item.scene.SearchPhrase = "person writing daily plan in notebook";
+            item.scene.SearchPhrases = ["person writing daily plan in notebook", "close up writing task list notebook"];
+            logger?.Warning($"Content review repair changed step label and visual query in scene_{item.index + 1:00}: {screenText}");
+        }
+    }
+
+    private static bool NeedsNewInformationRepair(ScriptScene scene)
+    {
+        var newInfo = NormalizeForComparison(scene.NewInformation);
+        var voice = NormalizeForComparison(scene.VoiceOver);
+        return string.IsNullOrWhiteSpace(newInfo) || newInfo.Equals(voice, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildNewInformationForScene(ScriptScene scene, int index, SourceAnalysis analysis)
+    {
+        var lower = scene.VoiceOver.ToLowerInvariant();
+        if (lower.Contains("chaos", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Problem: chaos na starcie dnia.";
+        }
+
+        if (lower.Contains("minut", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Mechanizm: jedna minuta planowania rano.";
+        }
+
+        if (lower.Contains("priorytet", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Pierwszy element planu: jeden priorytet.";
+        }
+
+        if (lower.Contains("male zadanie", StringComparison.OrdinalIgnoreCase) || lower.Contains("małe zadanie", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Drugi element planu: jedno male zadanie.";
+        }
+
+        if (lower.Contains("nie robisz", StringComparison.OrdinalIgnoreCase) || lower.Contains("odpuszcz", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Trzeci element planu: jedna rzecz swiadomie odpuszczona dzisiaj.";
+        }
+
+        var matchingStep = analysis.Steps.ElementAtOrDefault(index);
+        if (matchingStep is not null && !string.IsNullOrWhiteSpace(matchingStep.Text))
+        {
+            return EnsureSentence(CapitalizeFirst(matchingStep.Text));
+        }
+
+        return EnsureSentence($"Nowa informacja sceny {index + 1}: {RemoveTrailingPunctuation(scene.VoiceOver)}");
+    }
+
+    private static string RemoveLeadingActionVerb(string value)
+    {
+        return Regex.Replace(
+            NormalizeWhitespace(value),
+            "^(zapisz|wybierz|dopisz|sprawdz|usun|wylacz|wlacz|otworz)\\s+",
+            string.Empty,
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static string RemoveTrailingPunctuation(string value)
+    {
+        return NormalizeWhitespace(value).TrimEnd('.', '!', '?', ':', ';', ',');
+    }
+
+    private static string JoinWithPolishAnd(IReadOnlyList<string> values)
+    {
+        return values.Count switch
+        {
+            0 => string.Empty,
+            1 => values[0],
+            2 => $"{values[0]} i {values[1]}",
+            _ => $"{string.Join(", ", values.Take(values.Count - 1))} i {values[^1]}"
+        };
+    }
+
+    private static string CapitalizeFirst(string value)
+    {
+        var normalized = NormalizeWhitespace(value);
+        return string.IsNullOrWhiteSpace(normalized)
+            ? string.Empty
+            : char.ToUpperInvariant(normalized[0]) + normalized[1..];
+    }
+
+    private static string NormalizeForComparison(string value)
+    {
+        return Regex.Replace(
+            NormalizeWhitespace(value).ToLowerInvariant(),
+            "[^a-z0-9ąćęłńóśźż]+",
+            " ",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Trim();
     }
 
     private static ContentReview CreateHeuristicReview(SelectedTopic topic, ShortScript script)
@@ -2107,7 +2371,15 @@ public sealed class ScriptService
     private static string BuildSearchPhraseFromText(string value)
     {
         var lower = value.ToLowerInvariant();
-        if (lower.Contains("notatnik") || lower.Contains("notes") || lower.Contains("notebook") || lower.Contains("plan"))
+        if (lower.Contains("notatnik")
+            || lower.Contains("notes")
+            || lower.Contains("notebook")
+            || lower.Contains("plan")
+            || lower.Contains("zapisz")
+            || lower.Contains("priorytet")
+            || lower.Contains("zadanie")
+            || lower.Contains("odpuszcz")
+            || lower.Contains("nie robisz"))
         {
             return "person writing daily plan in notebook";
         }

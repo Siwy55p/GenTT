@@ -15,6 +15,9 @@ public partial class MainForm : Form
     private readonly TrendService _trendService;
     private readonly ShortGenerator _shortGenerator;
     private readonly BindingSource _trendBindingSource = new();
+    private string _lastGeneratedBriefJson = string.Empty;
+    private bool _updatingBriefText;
+    private bool _briefWasManuallyEdited;
 
     public MainForm(
         TrendService trendService,
@@ -35,11 +38,16 @@ public partial class MainForm : Form
             ?? Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.User)
             ?? Environment.GetEnvironmentVariable("PEXELS_API_KEY", EnvironmentVariableTarget.Machine)
             ?? string.Empty;
-        briefTextBox.Text = JsonSerializer.Serialize(ContentBrief.CreateDefault(), JsonOptions);
 
         trendsListBox.DataSource = _trendBindingSource;
         trendsListBox.DisplayMember = nameof(Trend.Title);
         trendsListBox.SelectedIndexChanged += TrendsListBox_SelectedIndexChanged;
+        selectedTopicTextBox.TextChanged += (_, _) => UpdateBriefFromCurrentInputs(force: false);
+        sourceTextTextBox.TextChanged += (_, _) => UpdateBriefFromCurrentInputs(force: false);
+        categoryComboBox.SelectedIndexChanged += (_, _) => UpdateBriefFromCurrentInputs(force: false);
+        briefTextBox.TextChanged += BriefTextBox_TextChanged;
+
+        UpdateBriefFromCurrentInputs(force: true);
     }
 
     private async void findTrendsButton_Click(object sender, EventArgs e)
@@ -55,6 +63,11 @@ public partial class MainForm : Form
 
             _trendBindingSource.DataSource = trends;
             trendsListBox.SelectedIndex = trends.Count > 0 ? 0 : -1;
+            if (trends.Count == 0)
+            {
+                UpdateBriefFromCurrentInputs(force: true);
+            }
+
             progressBar.Value = 100;
             statusLabel.Text = $"Zaladowano {trends.Count} tematow startowych.";
         });
@@ -127,14 +140,13 @@ public partial class MainForm : Form
     {
         try
         {
+            var thematicFallback = ContentBriefService.CreateForTopic(
+                selectedTopicTextBox.Text.Trim(),
+                sourceTextTextBox.Text.Trim(),
+                categoryComboBox.Text.Trim());
             var brief = JsonSerializer.Deserialize<ContentBrief>(briefTextBox.Text, JsonOptions)
-                ?? ContentBrief.CreateDefault();
-            if (brief.DurationSeconds <= 0)
-            {
-                brief.DurationSeconds = 25;
-            }
-
-            return brief;
+                ?? thematicFallback;
+            return ContentBriefService.FillMissing(brief, thematicFallback);
         }
         catch (JsonException ex)
         {
@@ -168,6 +180,61 @@ public partial class MainForm : Form
             selectedTopicTextBox.Text = trend.Title;
             sourceTextTextBox.Text = trend.SourceText;
             sourceUrlTextBox.Text = trend.SourceUrl;
+            UpdateBriefFromCurrentInputs(force: true);
+        }
+    }
+
+    private void BriefTextBox_TextChanged(object? sender, EventArgs e)
+    {
+        if (_updatingBriefText)
+        {
+            return;
+        }
+
+        _briefWasManuallyEdited = !briefTextBox.Text.Equals(_lastGeneratedBriefJson, StringComparison.Ordinal);
+    }
+
+    private void UpdateBriefFromCurrentInputs(bool force)
+    {
+        if (!force && _briefWasManuallyEdited)
+        {
+            return;
+        }
+
+        var brief = ContentBriefService.CreateForTopic(
+            selectedTopicTextBox.Text.Trim(),
+            sourceTextTextBox.Text.Trim(),
+            categoryComboBox.Text.Trim(),
+            GetCurrentBriefDuration());
+        SetBriefText(brief);
+    }
+
+    private int GetCurrentBriefDuration()
+    {
+        try
+        {
+            var current = JsonSerializer.Deserialize<ContentBrief>(briefTextBox.Text, JsonOptions);
+            return current?.DurationSeconds > 0 ? current.DurationSeconds : 25;
+        }
+        catch (JsonException)
+        {
+            return 25;
+        }
+    }
+
+    private void SetBriefText(ContentBrief brief)
+    {
+        var json = JsonSerializer.Serialize(brief, JsonOptions);
+        _updatingBriefText = true;
+        try
+        {
+            briefTextBox.Text = json;
+            _lastGeneratedBriefJson = json;
+            _briefWasManuallyEdited = false;
+        }
+        finally
+        {
+            _updatingBriefText = false;
         }
     }
 

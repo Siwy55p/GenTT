@@ -2,13 +2,13 @@ namespace TikTokGenerator.Models;
 
 public sealed class ContentBrief
 {
-    public string Audience { get; set; } = "osoby pracujace przy komputerze";
+    public string Audience { get; set; } = "osoby zainteresowane praktycznym tematem";
 
     public string KnowledgeLevel { get; set; } = "poczatkujacy";
 
-    public string ViewerProblem { get; set; } = "chaos po rozpoczeciu dnia";
+    public string ViewerProblem { get; set; } = "brak jasnego pierwszego kroku";
 
-    public string DesiredOutcome { get; set; } = "wybrac pierwszy priorytet";
+    public string DesiredOutcome { get; set; } = "wykonac jeden konkretny krok";
 
     public string ContentType { get; set; } = "praktyczny tutorial";
 

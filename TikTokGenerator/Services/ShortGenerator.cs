@@ -63,10 +63,22 @@ public sealed class ShortGenerator
 
             progress?.Report(new ShortGenerationProgress(28, "Recenzuje merytoryke"));
             var contentReview = await _scriptService.ReviewScriptAsync(topic, sourceAnalysis, script, options, logger, cancellationToken);
-            await logger.SaveJsonAsync("content-review.json", contentReview, cancellationToken);
-            if (contentReview.HasCriticalErrors)
+            await logger.SaveJsonAsync("content-review-initial.json", contentReview, cancellationToken);
+            if (ShouldRepairAfterReview(contentReview))
             {
-                throw new InvalidOperationException("Recenzent merytoryczny znalazl blad krytyczny. Render zostal zatrzymany. Szczegoly sa w debug/content-review.json.");
+                progress?.Report(new ShortGenerationProgress(31, "Poprawiam scenariusz po recenzji"));
+                script = _scriptService.RepairScriptAfterReview(topic, sourceAnalysis, script, contentReview, logger);
+                await SaveJsonAsync(Path.Combine(projectDirectory, "script.json"), script, cancellationToken);
+                await logger.SaveJsonAsync("script-after-content-review-repair.json", script, cancellationToken);
+
+                contentReview = await _scriptService.ReviewScriptAsync(topic, sourceAnalysis, script, options, logger, cancellationToken);
+                await logger.SaveJsonAsync("content-review-after-repair.json", contentReview, cancellationToken);
+            }
+
+            await logger.SaveJsonAsync("content-review.json", contentReview, cancellationToken);
+            if (contentReview.HasCriticalErrors || !contentReview.Approved)
+            {
+                throw new InvalidOperationException("Recenzent merytoryczny nie zatwierdzil scenariusza po probie poprawy. Render zostal zatrzymany. Szczegoly sa w debug/content-review.json i debug/script-after-content-review-repair.json.");
             }
 
             var wordBudget = CalculateWordBudget(topic.Brief.DurationSeconds);
@@ -132,11 +144,19 @@ public sealed class ShortGenerator
             await logger.SaveJsonAsync("quality-gate.json", qualityGate, cancellationToken);
             if (!qualityGate.Passed)
             {
+                var blockingIssues = qualityGate.Issues
+                    .Where(issue => issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (blockingIssues.Count == 0)
+                {
+                    blockingIssues = qualityGate.Issues
+                        .Where(issue => issue.Severity.Equals("warning", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+
                 var errors = string.Join(
                     Environment.NewLine,
-                    qualityGate.Issues
-                        .Where(issue => issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
-                        .Select(issue => $"- {issue.Code}: {issue.Message}"));
+                    blockingIssues.Select(issue => $"- {issue.Code}: {issue.Message}"));
                 throw new InvalidOperationException(
                     $"Bramka jakosci zatrzymala render. Wynik: {qualityGate.Score}/{qualityGate.Criteria.Sum(item => item.MaxPoints)}.{Environment.NewLine}{errors}{Environment.NewLine}{Environment.NewLine}Szczegoly: debug/quality-gate.json");
             }
@@ -191,6 +211,17 @@ public sealed class ShortGenerator
     {
         var json = JsonSerializer.Serialize(value, JsonOptions);
         await File.WriteAllTextAsync(path, json, cancellationToken);
+    }
+
+    private static bool ShouldRepairAfterReview(ContentReview review)
+    {
+        return !review.Approved
+            || review.HasCriticalErrors
+            || review.Issues.Any(issue =>
+                issue.Code.Contains("hook", StringComparison.OrdinalIgnoreCase)
+                || issue.Code.Contains("promise", StringComparison.OrdinalIgnoreCase)
+                || issue.Code.Contains("newInformation", StringComparison.OrdinalIgnoreCase)
+                || issue.Code.Contains("step", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string CreateProjectDirectory(string title)
