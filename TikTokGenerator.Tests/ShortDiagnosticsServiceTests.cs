@@ -62,6 +62,45 @@ public sealed class ShortDiagnosticsServiceTests
     }
 
     [Fact]
+    public void CreateScriptDiagnostics_WhenOnScreenTextAddsUnsupportedNumber_FlagsUnsupportedNumber()
+    {
+        var topic = new SelectedTopic
+        {
+            Title = "Minimalizm w aplikacjach",
+            SourceUrl = "offline://test",
+            SourceText = "Mniej ikon i mniej powiadomien pomaga szybciej znalezc potrzebne narzedzia."
+        };
+        var script = new ShortScript
+        {
+            Title = "Minimalizm",
+            Hook = "Telefon rozprasza po odblokowaniu?",
+            HookOnScreenText = "Telefon rozprasza",
+            Ending = "Zostaw tylko najwazniejsze narzedzia.",
+            EndingOnScreenText = "Najwazniejsze narzedzia",
+            Scenes =
+            [
+                new ScriptScene
+                {
+                    Role = "problem",
+                    VoiceOver = "Ekran telefonu moze rozpraszac.",
+                    SourceFactIds = ["F1"],
+                    NewInformation = "Rozpraszajacy ekran telefonu.",
+                    OnScreenText = "10+ powiadomien i ikon",
+                    VisualDescription = "Telefon z wieloma ikonami.",
+                    SearchPhrase = "smartphone home screen clutter"
+                }
+            ]
+        };
+
+        var report = ShortDiagnosticsService.CreateScriptDiagnostics(topic, script);
+
+        Assert.Contains(report.Issues, issue =>
+            issue.Code == "unsupported_number"
+            && issue.Evidence.Contains("onScreenText: 10", StringComparison.OrdinalIgnoreCase));
+        Assert.True(report.Summary.HasUnsupportedClaims);
+    }
+
+    [Fact]
     public void CreateClipDiagnostics_WhenClipRepeats_FlagsDuplicateUrl()
     {
         var topic = CreateTopic();

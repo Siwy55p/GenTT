@@ -28,7 +28,15 @@ public static class ContentBriefService
             return brief;
         }
 
-        if (ContainsAny(text, "minimalizm", "telefon", "powiadomien", "ekranie glownym"))
+        if (ContainsAny(text, "skaner 3d", "skanowanie 3d", "model 3d", "fotogrametr"))
+        {
+            brief.Audience = "osoby ciekawe prostych zastosowan telefonu";
+            brief.ViewerProblem = "brak jasnosci, jak telefon moze zamienic obiekt w model 3D";
+            brief.DesiredOutcome = "sprawdzic prosty skan malego obiektu telefonem";
+            return brief;
+        }
+
+        if (ContainsAny(text, "minimalizm", "powiadomien", "ekranie glownym", "pierwszym ekranie", "aplikacjach na telefonie"))
         {
             brief.Audience = "osoby korzystajace z telefonu na co dzien";
             brief.ViewerProblem = "rozpraszajacy ekran telefonu i nadmiar powiadomien";

@@ -18,7 +18,7 @@ internal static class ShortDiagnosticsService
     };
 
     private static readonly Regex ActionVerbRegex = new(
-        "\\b(otworz|usun|wlacz|wylacz|sprawdz|zapisz|wybierz|skanuj|przejdz|zablokuj|dopisz|skresl|zostaw|uporzadkuj|wez|kliknij|zacznij)\\b",
+        "\\b(otworz|usun|wlacz|wylacz|sprawdz|zapisz|wybierz|skanuj|przejdz|zablokuj|dopisz|skresl|zostaw|uporzadkuj|wez|kliknij|zacznij|wyrzuc|odloz|posprzataj)\\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex StoryboardRegex = new(
@@ -388,10 +388,11 @@ internal static class ShortDiagnosticsService
             AddIssue(report, "warning", "merytoryka", segment.Name, "missing_source_fact_ids", "Scena nie ma powiazania z faktem zrodlowym.", segment.VoiceOver, "Dodaj sourceFactIds, np. F1.");
         }
 
-        foreach (var evidence in FindUnsupportedNumbers(segment.VoiceOver, topic.SourceText))
+        AddUnsupportedNumberIssues(report, topic, segment, "voiceOver", segment.VoiceOver);
+        AddUnsupportedNumberIssues(report, topic, segment, "onScreenText", segment.OnScreenText);
+        if (IsSceneSegment(segment))
         {
-            segment.HasUnsupportedNumber = true;
-            AddIssue(report, "warning", "merytoryka", segment.Name, "unsupported_number", "Tekst zawiera liczbe, ktorej nie ma w zrodle.", evidence, "Usun liczbe albo dodaj ja do materialu zrodlowego.");
+            AddUnsupportedNumberIssues(report, topic, segment, "newInformation", segment.NewInformation);
         }
 
         foreach (var evidence in FindUnsupportedClaimPhrases(segment.VoiceOver, topic.SourceText))
@@ -521,6 +522,23 @@ internal static class ShortDiagnosticsService
             {
                 yield return evidence;
             }
+        }
+    }
+
+    private static void AddUnsupportedNumberIssues(
+        ShortDiagnosticsReport report,
+        SelectedTopic topic,
+        SegmentDiagnostics segment,
+        string field,
+        string value)
+    {
+        foreach (var evidence in FindUnsupportedNumbers(value, topic.SourceText).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            segment.HasUnsupportedNumber = true;
+            var formattedEvidence = field.Equals("voiceOver", StringComparison.OrdinalIgnoreCase)
+                ? evidence
+                : $"{field}: {evidence}";
+            AddIssue(report, "warning", "merytoryka", segment.Name, "unsupported_number", "Tekst zawiera liczbe, ktorej nie ma w zrodle.", formattedEvidence, "Usun liczbe albo dodaj ja do materialu zrodlowego.");
         }
     }
 

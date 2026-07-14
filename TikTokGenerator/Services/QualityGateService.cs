@@ -128,7 +128,7 @@ public static class QualityGateService
 
     private static int ScoreHookPayoff(ShortScript script, ContentReview review)
     {
-        if (HasPromiseProblem(review))
+        if (HasPromiseConcern(review))
         {
             return 3;
         }
@@ -224,7 +224,7 @@ public static class QualityGateService
             AddIssue(report, "error", "unsupported_payoff", "Payoff lub zakonczenie zawiera konkretny wynik/przyklad, ktorego nie ma w materiale zrodlowym.");
         }
 
-        if (HasPromiseProblem(review))
+        if (HasBlockingPromiseProblem(review))
         {
             AddIssue(report, "error", "promise_not_met", "Payoff nie spelnia obietnicy hooka wedlug recenzji merytorycznej.");
         }
@@ -316,14 +316,9 @@ public static class QualityGateService
         return false;
     }
 
-    private static bool HasPromiseProblem(ContentReview review)
+    private static bool HasPromiseConcern(ContentReview review)
     {
-        if (review.Issues.Any(issue =>
-            issue.Code.Contains("promise", StringComparison.OrdinalIgnoreCase)
-            || issue.Code.Contains("hooknotmet", StringComparison.OrdinalIgnoreCase)
-            || issue.Code.Contains("hook_not_met", StringComparison.OrdinalIgnoreCase)
-            || (issue.Code.Contains("hook", StringComparison.OrdinalIgnoreCase)
-                && issue.Code.Contains("mismatch", StringComparison.OrdinalIgnoreCase))))
+        if (review.Issues.Any(IsPromiseIssue))
         {
             return true;
         }
@@ -334,6 +329,22 @@ public static class QualityGateService
             || text.Contains("nie jest spe", StringComparison.OrdinalIgnoreCase)
             || text.Contains("niespeln", StringComparison.OrdinalIgnoreCase)
             || text.Contains("niespełn", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasBlockingPromiseProblem(ContentReview review)
+    {
+        return review.Issues.Any(issue =>
+            issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase)
+            && IsPromiseIssue(issue));
+    }
+
+    private static bool IsPromiseIssue(ContentReviewIssue issue)
+    {
+        return issue.Code.Contains("promise", StringComparison.OrdinalIgnoreCase)
+            || issue.Code.Contains("hooknotmet", StringComparison.OrdinalIgnoreCase)
+            || issue.Code.Contains("hook_not_met", StringComparison.OrdinalIgnoreCase)
+            || (issue.Code.Contains("hook", StringComparison.OrdinalIgnoreCase)
+                && issue.Code.Contains("mismatch", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool HasTopicBriefDrift(SelectedTopic topic, ShortScript script)

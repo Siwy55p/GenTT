@@ -266,9 +266,403 @@ public sealed class ScriptServiceTests
         Assert.Contains("jeden priorytet", repaired.Ending, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("jedno male zadanie", repaired.Ending, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("jedna rzecz", repaired.Ending, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Pierwszy element planu", repaired.Scenes[2].NewInformation, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(3, repaired.Scenes.Count);
+        Assert.Contains("Krok ze zrodla", repaired.Scenes[0].NewInformation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("notebook", repaired.Scenes[0].SearchPhrase, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("notebook", repaired.Scenes[2].SearchPhrase, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("notebook", repaired.Scenes[4].SearchPhrase, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RepairScriptAfterReview_WhenDeskScriptAddsUnsupportedTime_RebuildsFromSourceSteps()
+    {
+        var service = new ScriptService(new HttpClient());
+        var topic = new SelectedTopic
+        {
+            Title = "Szybki reset biurka po pracy",
+            SourceUrl = "offline://test",
+            SourceText = "Praktyczna teza: szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny. Konkretne kroki: wyrzuc smieci, odloz rzeczy na miejsce, zostaw jedna kartke z pierwszym zadaniem na jutro. Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.",
+            Brief = new ContentBrief
+            {
+                Audience = "osoby pracujace przy biurku",
+                ViewerProblem = "balagan po zakonczonej pracy",
+                DesiredOutcome = "zostawic biurko gotowe na kolejny start"
+            }
+        };
+        var analysis = new SourceAnalysis
+        {
+            MainThesis = "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny",
+            Facts =
+            [
+                new SourceFact { Id = "F1", Text = "wyrzuc smieci", Evidence = "Konkretne kroki: wyrzuc smieci, odloz rzeczy na miejsce, zostaw jedna kartke z pierwszym zadaniem na jutro." },
+                new SourceFact { Id = "F2", Text = "odloz rzeczy na miejsce", Evidence = "Konkretne kroki: wyrzuc smieci, odloz rzeczy na miejsce, zostaw jedna kartke z pierwszym zadaniem na jutro." },
+                new SourceFact { Id = "F3", Text = "zostaw jedna kartke z pierwszym zadaniem na jutro", Evidence = "Konkretne kroki: wyrzuc smieci, odloz rzeczy na miejsce, zostaw jedna kartke z pierwszym zadaniem na jutro." }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "wyrzuc smieci", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S2", Text = "odloz rzeczy na miejsce", SourceFactIds = ["F2"] },
+                new SourceStep { Id = "S3", Text = "zostaw jedna kartke z pierwszym zadaniem na jutro", SourceFactIds = ["F3"] }
+            ],
+            MostUsefulFragment = "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny"
+        };
+        var script = new ShortScript
+        {
+            Title = "Szybki reset biurka w 3 krokach",
+            Hook = "Co robic po pracy, aby biurko nie bylo balaganem?",
+            HookOnScreenText = "Biurko nie musi byc balaganem",
+            Ending = "Szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny.",
+            EndingOnScreenText = "Zamknij dzien",
+            Scenes =
+            [
+                new ScriptScene { Role = "mechanism", VoiceOver = "Aby to naprawic, wykonaj 3 proste kroki.", SourceFactIds = ["F1"], NewInformation = "3 kroki naprawiaja balagan.", OnScreenText = "3 kroki", SearchPhrase = "person organizing desk after work" },
+                new ScriptScene { Role = "proof", VoiceOver = "To sprawdza sie w 2 minutach.", SourceFactIds = ["F1"], NewInformation = "Reset w 2 minuty.", OnScreenText = "2 minuty", SearchPhrase = "person organizing desk after work" }
+            ]
+        };
+        var review = new ContentReview
+        {
+            Approved = false,
+            Issues =
+            [
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "scene_04",
+                    Code = "newInformationMissing",
+                    Message = "Scena dodaje czas, ktorego nie ma w zrodle.",
+                    SuggestedFix = "Nie dodawaj 2 minut."
+                }
+            ]
+        };
+
+        var repaired = service.RepairScriptAfterReview(topic, analysis, script, review);
+        var diagnostics = ShortDiagnosticsService.CreateScriptDiagnostics(topic, repaired);
+
+        Assert.Equal("Szybki reset biurka po pracy", repaired.Title);
+        Assert.Equal("Jak szybko zresetowac biurko po pracy?", repaired.Hook);
+        Assert.Equal(3, repaired.Scenes.Count);
+        Assert.DoesNotContain("2 minut", string.Join(" ", repaired.Scenes.Select(scene => scene.VoiceOver)), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("3 proste kroki", string.Join(" ", repaired.Scenes.Select(scene => scene.VoiceOver)), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(repaired.Scenes, scene => scene.VoiceOver.Contains("Wyrzuc smieci", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(repaired.Scenes, scene => scene.VoiceOver.Contains("Odloz rzeczy na miejsce", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(repaired.Scenes, scene => scene.VoiceOver.Contains("Zostaw jedna kartke", StringComparison.OrdinalIgnoreCase));
+        Assert.False(diagnostics.Summary.HasUnsupportedClaims);
+    }
+
+    [Fact]
+    public void RepairScriptAfterReview_WhenPhoneMinimalismIsRebuilt_KeepsActionVerbsInEnding()
+    {
+        var service = new ScriptService(new HttpClient());
+        var topic = new SelectedTopic
+        {
+            Title = "Minimalizm w aplikacjach na telefonie",
+            SourceUrl = "offline://test",
+            SourceText = "Praktyczna teza: mniej ikon i mniej powiadomien pomaga szybciej znalezc to, co naprawde potrzebne. Konkretne kroki: usun z ekranu glownego aplikacje nieuzywane codziennie, wylacz niepilne powiadomienia, zostaw na pierwszym ekranie tylko najwazniejsze narzedzia.",
+            Brief = new ContentBrief
+            {
+                Audience = "osoby korzystajace z telefonu na co dzien",
+                ViewerProblem = "rozpraszajacy ekran telefonu i nadmiar powiadomien",
+                DesiredOutcome = "uporzadkowac pierwszy ekran telefonu"
+            }
+        };
+        var analysis = CreatePhoneMinimalismAnalysis();
+        var script = new ShortScript
+        {
+            Title = "Minimalizm na pierwszym ekranie",
+            Hook = "Zostaw tylko to, co naprawde potrzebujesz na pierwszym ekranie.",
+            Ending = "Zostaw tylko to, co naprawde potrzebujesz na pierwszym ekranie.",
+            Scenes =
+            [
+                new ScriptScene { Role = "proof", VoiceOver = "Zostaw na pierwszym ekranie tylko najwazniejsze narzedzia.", SourceFactIds = ["F1"], NewInformation = "zostaw najwazniejsze narzedzia", OnScreenText = "Najwazniejsze narzedzia", SearchPhrase = "close up smartphone productivity app" }
+            ]
+        };
+        var review = new ContentReview
+        {
+            Approved = false,
+            Issues =
+            [
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "hook",
+                    Code = "hookDoesNotMatchProof",
+                    Message = "Hook nie pasuje do proof.",
+                    SuggestedFix = "Zmien hook."
+                }
+            ]
+        };
+
+        var repaired = service.RepairScriptAfterReview(topic, analysis, script, review);
+        var diagnostics = ShortDiagnosticsService.CreateScriptDiagnostics(topic, repaired);
+
+        Assert.Equal("Telefon rozprasza po odblokowaniu?", repaired.Hook);
+        Assert.Contains("usun z ekranu glownego", repaired.Ending, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("wylacz niepilne powiadomienia", repaired.Ending, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("zostaw na pierwszym ekranie", repaired.Ending, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(3, repaired.Scenes.Count);
+        Assert.False(diagnostics.Summary.HasUnsupportedClaims);
+    }
+
+    [Fact]
+    public void RepairScriptAfterReview_WhenScannerTopicDriftsToNotifications_RebuildsScannerScript()
+    {
+        var service = new ScriptService(new HttpClient());
+        var topic = CreateScannerTopic();
+        var analysis = new SourceAnalysis
+        {
+            MainThesis = "telefon moze posluzyc do prostego skanu 3D obiektu",
+            Facts =
+            [
+                new SourceFact
+                {
+                    Id = "F1",
+                    Text = "telefon moze posluzyc do prostego skanu 3D obiektu",
+                    Evidence = "Praktyczna teza: telefon moze posluzyc do prostego skanu 3D obiektu"
+                }
+            ],
+            Steps = [],
+            MostUsefulFragment = "telefon moze posluzyc do prostego skanu 3D obiektu"
+        };
+        var script = new ShortScript
+        {
+            Title = "Krok po kroku: Jak zredukowac powiadomienia na ekranie",
+            Hook = "Dlaczego Twoj telefon jest jak skaner 3D?",
+            HookOnScreenText = "Telefon jako skaner 3D",
+            Ending = "Zredukuj powiadomienia do 1 kroku, aby uporzadkowac ekran.",
+            EndingOnScreenText = "Zredukuj do 1 kroku",
+            Scenes =
+            [
+                new ScriptScene
+                {
+                    Role = "action",
+                    VoiceOver = "Otworz ustawienia powiadomien i wybierz zredukuj do 1 kroku.",
+                    SourceFactIds = ["F1"],
+                    NewInformation = "Ustawienia powiadomien.",
+                    OnScreenText = "Zredukuj do 1 kroku",
+                    SearchPhrase = "close up smartphone productivity app"
+                },
+                new ScriptScene
+                {
+                    Role = "proof",
+                    VoiceOver = "Po zredukowaniu ekran zostanie uporzadkowany bez dodatkowych powiadomien.",
+                    SourceFactIds = ["F1"],
+                    NewInformation = "Ekran uporzadkowany po zredukowaniu powiadomien.",
+                    OnScreenText = "Ekran uporzadkowany",
+                    SearchPhrase = "close up smartphone productivity app"
+                }
+            ]
+        };
+        var review = new ContentReview
+        {
+            Approved = false,
+            Issues =
+            [
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "scene_01",
+                    Code = "sourceMismatch",
+                    Message = "Scena dotyczy powiadomien, a zrodlo dotyczy skanu 3D.",
+                    SuggestedFix = "Wroc do tematu skanowania 3D."
+                }
+            ]
+        };
+
+        var repaired = service.RepairScriptAfterReview(topic, analysis, script, review);
+        var diagnostics = ShortDiagnosticsService.CreateScriptDiagnostics(topic, repaired);
+        var repairedText = string.Join(" ", repaired.Hook, repaired.Ending, string.Join(" ", repaired.Scenes.Select(scene => scene.VoiceOver)));
+
+        Assert.Contains("skan 3D", repaired.Hook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("obiekt", repairedText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("model", repairedText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(repaired.Scenes, scene => scene.SearchPhrase.Contains("scanning", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("powiadom", repairedText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("zredukuj", repairedText, StringComparison.OrdinalIgnoreCase);
+        Assert.False(diagnostics.Summary.HasUnsupportedClaims);
+    }
+
+    [Fact]
+    public void SanitizeReviewAgainstSource_WhenReviewerRejectsSourceStepsAsNoNewInformation_ApprovesReview()
+    {
+        var topic = new SelectedTopic
+        {
+            Title = "Minimalizm w aplikacjach na telefonie",
+            SourceUrl = "offline://test",
+            SourceText = "Konkretne kroki: usun z ekranu glownego aplikacje nieuzywane codziennie, wylacz niepilne powiadomienia, zostaw na pierwszym ekranie tylko najwazniejsze narzedzia.",
+            Brief = new ContentBrief
+            {
+                ViewerProblem = "rozpraszajacy ekran telefonu i nadmiar powiadomien",
+                DesiredOutcome = "uporzadkowac pierwszy ekran telefonu"
+            }
+        };
+        var analysis = CreatePhoneMinimalismAnalysis();
+        var script = new ShortScript
+        {
+            Title = "Minimalizm na pierwszym ekranie",
+            Hook = "Telefon rozprasza po odblokowaniu?",
+            Ending = "Usun z ekranu glownego aplikacje nieuzywane codziennie, wylacz niepilne powiadomienia i zostaw na pierwszym ekranie tylko najwazniejsze narzedzia.",
+            Scenes =
+            [
+                new ScriptScene { Role = "action", VoiceOver = "Usun z ekranu glownego aplikacje nieuzywane codziennie.", SourceFactIds = ["F1"], NewInformation = "Pierwszy krok: aplikacje nieuzywane codziennie.", OnScreenText = "Usun aplikacje", SearchPhrase = "person organizing smartphone home screen apps" },
+                new ScriptScene { Role = "action", VoiceOver = "Wylacz niepilne powiadomienia.", SourceFactIds = ["F1"], NewInformation = "Drugi krok: niepilne powiadomienia.", OnScreenText = "Wylacz powiadomienia", SearchPhrase = "person organizing smartphone home screen apps" },
+                new ScriptScene { Role = "action", VoiceOver = "Zostaw na pierwszym ekranie tylko najwazniejsze narzedzia.", SourceFactIds = ["F1"], NewInformation = "Trzeci krok: najwazniejsze narzedzia.", OnScreenText = "Najwazniejsze narzedzia", SearchPhrase = "person organizing smartphone home screen apps" }
+            ]
+        };
+        var review = new ContentReview
+        {
+            Approved = false,
+            UsefulnessScore = 0,
+            Issues =
+            [
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "scenes",
+                    Code = "noNewInformationInScene",
+                    Message = "Scena 1 nie wnosi nowej informacji, bo krok jest juz zawarty w tezie zrodla.",
+                    SuggestedFix = "Usun scene, poniewaz krok jest juz opisany w zrodle."
+                },
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "hook",
+                    Code = "hookDoesNotMatchPayoff",
+                    Message = "Hook nie spelnia obietnicy payoffu.",
+                    SuggestedFix = "Zmien hook."
+                }
+            ]
+        };
+
+        ScriptService.SanitizeReviewAgainstSource(topic, analysis, script, review);
+
+        Assert.True(review.Approved);
+        Assert.DoesNotContain(review.Issues, issue => issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(review.Issues, issue => issue.Code == "noNewInformationInScene" && issue.Severity == "info");
+        Assert.Contains(review.Issues, issue => issue.Code == "hookDoesNotMatchPayoff" && issue.Severity == "warning");
+        Assert.Equal(7, review.UsefulnessScore);
+    }
+
+    [Fact]
+    public void SanitizeReviewAgainstSource_WhenReviewerDemandsExtraExamplesForSourceSteps_ApprovesReview()
+    {
+        var topic = new SelectedTopic
+        {
+            Title = "Szybki reset biurka po pracy",
+            SourceUrl = "offline://test",
+            SourceText = "Praktyczna teza: szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny. Konkretne kroki: wyrzuc smieci, odloz rzeczy na miejsce, zostaw jedna kartke z pierwszym zadaniem na jutro.",
+            Brief = new ContentBrief
+            {
+                ViewerProblem = "balagan po zakonczonej pracy",
+                DesiredOutcome = "zostawic biurko gotowe na kolejny start"
+            }
+        };
+        var analysis = new SourceAnalysis
+        {
+            MainThesis = "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny",
+            Facts =
+            [
+                new SourceFact { Id = "F1", Text = "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny", Evidence = "Praktyczna teza" }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "wyrzuc smieci", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S2", Text = "odloz rzeczy na miejsce", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S3", Text = "zostaw jedna kartke z pierwszym zadaniem na jutro", SourceFactIds = ["F1"] }
+            ],
+            MostUsefulFragment = "szybki reset biurka po pracy pomaga zamknac dzien i latwiej zaczac kolejny"
+        };
+        var script = new ShortScript
+        {
+            Title = "Szybki reset biurka po pracy",
+            Hook = "Jak szybko zresetowac biurko po pracy?",
+            Ending = "Wyrzuc smieci, odloz rzeczy na miejsce i zostaw jedna kartke z pierwszym zadaniem na jutro.",
+            Scenes =
+            [
+                new ScriptScene { Role = "action", VoiceOver = "Wyrzuc smieci.", SourceFactIds = ["F1"], NewInformation = "Krok ze zrodla: wyrzuc smieci.", OnScreenText = "Wyrzuc smieci", SearchPhrase = "person organizing desk after work" },
+                new ScriptScene { Role = "action", VoiceOver = "Odloz rzeczy na miejsce.", SourceFactIds = ["F1"], NewInformation = "Krok ze zrodla: odloz rzeczy na miejsce.", OnScreenText = "Odloz rzeczy", SearchPhrase = "person organizing desk after work" },
+                new ScriptScene { Role = "action", VoiceOver = "Zostaw jedna kartke z pierwszym zadaniem na jutro.", SourceFactIds = ["F1"], NewInformation = "Krok ze zrodla: zostaw jedna kartke z pierwszym zadaniem na jutro.", OnScreenText = "Kartka z zadaniem", SearchPhrase = "person writing task on paper at desk" }
+            ]
+        };
+        var review = new ContentReview
+        {
+            Approved = false,
+            UsefulnessScore = 6,
+            Issues =
+            [
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "scene_01",
+                    Code = "noNewInformation",
+                    Message = "Scena 01 nie wnosi nowej informacji, bo nie dodaje kontekstu dla wyrzuc smieci.",
+                    SuggestedFix = "Dodaj przyklad papierkow z poprzedniego dnia."
+                },
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "scene_02",
+                    Code = "noNewInformation",
+                    Message = "Scena 02 nie wnosi nowej informacji, bo nie okresla miejsca.",
+                    SuggestedFix = "Dodaj przyklad dokumentow na szafke."
+                },
+                new ContentReviewIssue
+                {
+                    Severity = "error",
+                    Segment = "scene_03",
+                    Code = "noNewInformation",
+                    Message = "Scena 03 nie wnosi nowej informacji, bo nie podaje przykladu zadania.",
+                    SuggestedFix = "Dodaj przyklad Zakupic mleko."
+                }
+            ]
+        };
+
+        ScriptService.SanitizeReviewAgainstSource(topic, analysis, script, review);
+
+        Assert.True(review.Approved);
+        Assert.DoesNotContain(review.Issues, issue => issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase));
+        Assert.All(review.Issues, issue => Assert.Equal("info", issue.Severity));
+    }
+
+    private static SelectedTopic CreateScannerTopic()
+    {
+        return new SelectedTopic
+        {
+            Title = "Ciekawostka technologiczna: telefon jako skaner 3D",
+            SourceUrl = "offline://test",
+            SourceText = """
+            Temat roboczy: Ciekawostka technologiczna: telefon jako skaner 3D
+            Kategoria: Technologia
+            Praktyczna teza: telefon moze posluzyc do prostego skanu 3D obiektu, gdy aplikacja sklada zdjecia lub nagranie z kilku stron w model.
+            Konkretne kroki: wybierz maly nieruchomy obiekt z wyrazna faktura, obejdz go telefonem z kilku stron, sprawdz w aplikacji czy model nie ma brakujacych fragmentow.
+            Korzysc dla widza: widz rozumie, ze skan 3D telefonem zaczyna sie od stabilnego obiektu, dobrego swiatla i obejscia obiektu kamera.
+            Ograniczenia: nie obiecuj dokladnosci technicznej ani profesjonalnego skanu.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """,
+            Brief = new ContentBrief
+            {
+                Audience = "osoby ciekawe prostych zastosowan telefonu",
+                ViewerProblem = "brak jasnosci, jak telefon moze zamienic obiekt w model 3D",
+                DesiredOutcome = "sprawdzic prosty skan malego obiektu telefonem"
+            }
+        };
+    }
+
+    private static SourceAnalysis CreatePhoneMinimalismAnalysis()
+    {
+        return new SourceAnalysis
+        {
+            MainThesis = "mniej ikon i mniej powiadomien pomaga szybciej znalezc to, co naprawde potrzebne",
+            Facts =
+            [
+                new SourceFact { Id = "F1", Text = "mniej ikon i mniej powiadomien pomaga szybciej znalezc to, co naprawde potrzebne", Evidence = "Praktyczna teza" }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "usun z ekranu glownego aplikacje nieuzywane codziennie", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S2", Text = "wylacz niepilne powiadomienia", SourceFactIds = ["F1"] },
+                new SourceStep { Id = "S3", Text = "zostaw na pierwszym ekranie tylko najwazniejsze narzedzia", SourceFactIds = ["F1"] }
+            ],
+            MostUsefulFragment = "mniej ikon i mniej powiadomien pomaga szybciej znalezc to, co naprawde potrzebne"
+        };
     }
 
     private static SelectedTopic CreateTopic()

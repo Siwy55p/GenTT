@@ -117,6 +117,59 @@ public sealed class TrendService
             """;
         }
 
+        if (title.Contains("Nowa funkcja telefonu", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: funkcja skrotow lub automatyzacji w telefonie moze oszczedzic czas przy powtarzalnej czynnosci.
+            Konkretne kroki: wybierz jedna czynnosc powtarzana codziennie, ustaw dla niej prosty skrot w telefonie, przetestuj skrot na jednej sytuacji.
+            Korzysc dla widza: widz wie, jak zaczac od jednej automatyzacji zamiast szukac wielu aplikacji.
+            Ograniczenia: nie podawaj nazw systemow, aplikacji ani obietnic ile minut da sie zaoszczedzic.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
+        if (title.Contains("Aplikacja AI", StringComparison.OrdinalIgnoreCase)
+            && title.Contains("notatki", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: aplikacja AI do nagran moze pomoc szybciej znalezc decyzje i zadania, ale wynik trzeba sprawdzic.
+            Konkretne kroki: wgraj jedno nagranie lub transkrypcje, popros o liste decyzji i zadan, porownaj wynik z najwazniejszym fragmentem nagrania.
+            Korzysc dla widza: widz dostaje sposob na szybki przeglad spotkania bez zaufania w ciemno.
+            Ograniczenia: nie obiecuj idealnej dokladnosci ani pracy bez internetu.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
+        if (title.Contains("skaner 3D", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: telefon moze posluzyc do prostego skanu 3D obiektu przez fotogrametrie, gdy aplikacja sklada zdjecia lub nagranie z kilku stron w model.
+            Konkretne kroki: wybierz maly nieruchomy obiekt z wyrazna faktura, obejdz go telefonem z kilku stron, sprawdz w aplikacji czy model nie ma brakujacych fragmentow.
+            Korzysc dla widza: widz rozumie, ze skan 3D telefonem zaczyna sie od stabilnego obiektu, dobrego swiatla i obejscia obiektu kamera.
+            Ograniczenia: nie obiecuj dokladnosci technicznej ani profesjonalnego skanu.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
+        if (title.Contains("Trik w Windows", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: historia schowka w Windows pomaga wrocic do niedawno skopiowanego tekstu bez ponownego szukania.
+            Konkretne kroki: wlacz historie schowka, skopiuj dwa rozne fragmenty tekstu, wybierz potrzebny fragment z panelu historii.
+            Korzysc dla widza: widz wie, jak odzyskac ostatnio kopiowany tekst w prostym zadaniu.
+            Ograniczenia: nie obiecuj odzyskania rzeczy sprzed wlaczenia historii schowka.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
         if (title.Contains("hasla", StringComparison.OrdinalIgnoreCase))
         {
             return $"""
@@ -125,6 +178,71 @@ public sealed class TrendService
             Praktyczna teza: bezpieczniejsze hasla zaczynaja sie od menedzera hasel i unikalnego hasla dla kazdego konta.
             Konkretne kroki: wybierz menedzer hasel, zmien najwazniejsze haslo, wlacz dwustopniowe logowanie tam, gdzie jest dostepne.
             Korzysc dla widza: mniej powtarzania tych samych hasel i latwiejsze porzadkowanie kont.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
+        if (title.Contains("nawyk finansowy", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: jeden prosty przeglad finansow na start miesiaca pomaga szybciej zobaczyc, co wymaga uwagi.
+            Konkretne kroki: sprawdz saldo i stale oplaty, wybierz jeden koszt do obserwacji, zapisz jedna decyzje finansowa na ten miesiac.
+            Korzysc dla widza: widz zaczyna miesiac od jednego konkretnego przegladu zamiast ogolnego stresu.
+            Ograniczenia: nie dawaj porad inwestycyjnych ani obietnic oszczednosci.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
+        if (title.Contains("automatyzuja obsluge klienta", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: mala firma moze zaczac automatyzacje obslugi klienta od powtarzalnych pytan, a nie od duzego systemu.
+            Konkretne kroki: wypisz trzy najczestsze pytania klientow, przygotuj krotka odpowiedz szablonowa, okresl kiedy rozmowe ma przejac czlowiek.
+            Korzysc dla widza: widz widzi prosty start automatyzacji bez utraty kontroli nad rozmowa.
+            Ograniczenia: nie obiecuj zastapienia calej obslugi klienta.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
+        if (title.Contains("mikroprodukt", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: mikroprodukt cyfrowy powinien rozwiazywac jeden maly problem, ktory odbiorca rozumie od razu.
+            Konkretne kroki: wybierz jeden powtarzalny problem odbiorcy, zamien rozwiazanie w checkliste lub szablon, pokaz prosty przyklad uzycia.
+            Korzysc dla widza: widz wie, jak zawezic pomysl do malego produktu zamiast budowac duzy kurs.
+            Ograniczenia: nie obiecuj sprzedazy ani wyniku finansowego.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
+        if (title.Contains("pierwszej kampanii reklamowej", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: pierwsza kampania reklamowa latwo traci sens, gdy promuje zbyt wiele komunikatow naraz.
+            Konkretne kroki: wybierz jeden cel kampanii, napisz jeden glowny komunikat, sprawdz czy reklama prowadzi do jednej akcji.
+            Korzysc dla widza: widz umie uproscic pierwsza kampanie przed uruchomieniem.
+            Ograniczenia: nie podawaj stawek, procentow ani gwarancji wyniku.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
+        if (title.Contains("opisac oferte", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: dobra krotka oferta mowi komu pomaga, jaki problem rozwiazuje i jaki jest pierwszy krok.
+            Konkretne kroki: nazw odbiorce, nazw jeden problem, zakoncz oferta jednym konkretnym wezwaniem do dzialania.
+            Korzysc dla widza: widz potrafi skrocic opis oferty do jasnego komunikatu.
+            Ograniczenia: nie dodawaj wynikow sprzedazy ani obietnic bez dowodu.
             Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
             """;
         }
@@ -141,12 +259,39 @@ public sealed class TrendService
             """;
         }
 
+        if (title.Contains("poprawia sen", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: spokojniejszy wieczor latwiej zaczac od jednego malego sygnalu odciecia dnia.
+            Konkretne kroki: wybierz jedna czynnosc bez ekranu, odloz telefon poza zasieg reki, przygotuj jedna rzecz na rano.
+            Korzysc dla widza: widz ma prosty wieczorny krok zamiast dlugiej rutyny.
+            Ograniczenia: nie skladaj obietnic medycznych ani gwarancji lepszego snu.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
+        if (title.Contains("zaplanowac tydzien", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"""
+            Temat roboczy: {title}
+            Kategoria: {category}
+            Praktyczna teza: plan tygodnia jest latwiejszy, gdy najpierw oddziela sie zadania konieczne od opcjonalnych.
+            Konkretne kroki: wypisz wszystkie zadania tygodnia, oznacz trzy rzeczy konieczne, zostaw miejsce na nieprzewidziane sprawy.
+            Korzysc dla widza: widz zaczyna tydzien z jasnym wyborem najwazniejszych zadan.
+            Ograniczenia: nie obiecuj braku stresu ani idealnej kontroli tygodnia.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """;
+        }
+
         return $"""
         Temat roboczy: {title}
         Kategoria: {category}
-        Scenariusz powinien byc krotki, konkretny i oparty tylko na tych informacjach.
-        Struktura praktyczna: pokaz prosty problem, podaj jeden maly krok, pokaz jak sprawdzic efekt.
-        Korzysc dla widza: po obejrzeniu ma wiedziec, co moze zrobic od razu.
+        Praktyczna teza: temat wymaga wybrania jednego konkretnego problemu i jednego prostego pierwszego kroku.
+        Konkretne kroki: nazw problem odbiorcy, wybierz najmniejszy mozliwy krok, sprawdz widoczny rezultat po wykonaniu kroku.
+        Korzysc dla widza: po obejrzeniu widz wie, jaki pierwszy krok moze wykonac bez dodatkowych narzedzi.
+        Ograniczenia: nie dodawaj danych, nazw firm ani obietnic, ktorych nie ma w tym materiale.
         Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
         """;
     }

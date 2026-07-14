@@ -38,6 +38,46 @@ public sealed class PipelineQualityRegressionTests
     }
 
     [Fact]
+    public void SanitizeUnsupportedContent_WhenModelInventsScannerSteps_RecoversConcreteStepsFromSource()
+    {
+        var topic = new SelectedTopic
+        {
+            Title = "Ciekawostka technologiczna: telefon jako skaner 3D",
+            SourceUrl = "offline://test",
+            SourceText = """
+            Temat roboczy: Ciekawostka technologiczna: telefon jako skaner 3D
+            Kategoria: Technologia
+            Praktyczna teza: telefon moze posluzyc do prostego skanu 3D obiektu, gdy aplikacja sklada zdjecia lub nagranie z kilku stron w model.
+            Konkretne kroki: wybierz maly nieruchomy obiekt z wyrazna faktura, obejdz go telefonem z kilku stron, sprawdz w aplikacji czy model nie ma brakujacych fragmentow.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """
+        };
+        var analysis = new SourceAnalysis
+        {
+            MainThesis = "Telefon tworzy idealny model 3D bez specjalnego sprzetu.",
+            Facts =
+            [
+                new SourceFact { Id = "F1", Text = "Telefon tworzy idealny model 3D bez specjalnego sprzetu.", Evidence = "wymyslone" }
+            ],
+            Steps =
+            [
+                new SourceStep { Id = "S1", Text = "Kup profesjonalny skaner 3D.", SourceFactIds = ["F1"] }
+            ],
+            MostUsefulFragment = "Telefon tworzy idealny model 3D bez specjalnego sprzetu."
+        };
+
+        SourceAnalysisDiagnosticsService.SanitizeUnsupportedContent(topic, analysis);
+        var diagnostics = SourceAnalysisDiagnosticsService.CreateDiagnostics(topic, analysis);
+
+        Assert.False(diagnostics.HasBlockingIssues);
+        Assert.Equal(3, analysis.Steps.Count);
+        Assert.Contains(analysis.Steps, step => step.Text.Contains("wybierz maly nieruchomy obiekt", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(analysis.Steps, step => step.Text.Contains("obejdz go telefonem", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(analysis.Steps, step => step.Text.Contains("model nie ma brakujacych", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(analysis.Steps, step => step.Text.Contains("Kup profesjonalny", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void CreateScriptDiagnostics_WhenSourceSaysOneMinute_DoesNotFlagDigitOneAsUnsupported()
     {
         var topic = new SelectedTopic
@@ -99,7 +139,7 @@ public sealed class PipelineQualityRegressionTests
     }
 
     [Fact]
-    public void EvaluateBeforeRender_WhenReviewerSaysHookNotMet_ReducesHookPayoffScore()
+    public void EvaluateBeforeRender_WhenReviewerWarnsHookNotMet_ReducesHookPayoffScoreWithoutBlocking()
     {
         var topic = CreateMorningTopic();
         var analysis = CreateMorningAnalysis();
@@ -126,7 +166,39 @@ public sealed class PipelineQualityRegressionTests
 
         var hookCriterion = Assert.Single(report.Criteria, criterion => criterion.Name == "Hook zgodny z payoffem");
         Assert.Equal(3, hookCriterion.Points);
+        Assert.True(report.Passed);
+        Assert.DoesNotContain(report.Issues, issue => issue.Code == "promise_not_met");
+    }
+
+    [Fact]
+    public void EvaluateBeforeRender_WhenReviewerErrorsHookNotMet_BlocksRender()
+    {
+        var topic = CreateMorningTopic();
+        var analysis = CreateMorningAnalysis();
+        var script = CreateMorningScript(payoff: "Zapisz jeden priorytet, jedno male zadanie i jedna rzecz, ktorej dzis nie robisz.");
+        var review = CreateApprovedReview();
+        review.Approved = false;
+        review.Issues.Add(new ContentReviewIssue
+        {
+            Severity = "error",
+            Segment = "hook",
+            Code = "hookNotMet",
+            Message = "Hook nie jest spelniony przez payoff.",
+            SuggestedFix = "Dopasuj payoff do hooka."
+        });
+        review.PromiseCheck = "Obietnica hooka nie jest spelniona.";
+
+        var report = QualityGateService.EvaluateBeforeRender(
+            topic,
+            analysis,
+            script,
+            review,
+            CreateGoodVisualPlan(),
+            CreateVoiceSegments(script),
+            CreateClips());
+
         Assert.False(report.Passed);
+        Assert.Contains(report.Issues, issue => issue.Code == "promise_not_met");
     }
 
     [Fact]

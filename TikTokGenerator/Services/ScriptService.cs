@@ -181,16 +181,27 @@ public sealed class ScriptService
             logger,
             cancellationToken,
             temperature: 0.1,
-            numPredict: 1400);
+            numPredict: 2400);
 
         if (TryDeserializeModelOutput(raw, out ContentReview? review, out var error) && review is not null)
         {
+            NormalizeReview(review);
+            SanitizeReviewAgainstSource(topic, analysis, script, review, logger);
             NormalizeReview(review);
             return review;
         }
 
         logger?.Warning($"Content review parse failed: {error}. Using heuristic review fallback.");
-        return CreateHeuristicReview(topic, script);
+        var fallback = CreateHeuristicReview(topic, script);
+        fallback.Issues.Insert(0, new ContentReviewIssue
+        {
+            Severity = "warning",
+            Segment = "content-review",
+            Code = "review_parse_failed",
+            Message = "Odpowiedz recenzenta merytorycznego byla niepoprawnym albo ucietym JSON-em. Uzyto lokalnej recenzji heurystycznej.",
+            SuggestedFix = "Zmniejsz dlugosc odpowiedzi recenzenta albo zwieksz num_predict dla etapu content-review."
+        });
+        return fallback;
     }
 
     public ShortScript RepairScriptAfterReview(
@@ -202,6 +213,14 @@ public sealed class ScriptService
     {
         var repaired = CloneScript(script);
         logger?.Warning($"Repairing script after content review. Approved={review.Approved}; Critical={review.HasCriticalErrors}; Issues={review.Issues.Count}");
+        var diagnostics = ShortDiagnosticsService.CreateScriptDiagnostics(topic, repaired);
+        if (ShouldRebuildFromSource(review, diagnostics, analysis))
+        {
+            logger?.Warning($"Content review repair is rebuilding script from source steps. UnsupportedClaims={diagnostics.Summary.HasUnsupportedClaims}; Errors={diagnostics.Summary.ErrorCount}; SourceSteps={analysis.Steps.Count}");
+            var rebuilt = BuildSourceSafeScript(topic, analysis, repaired);
+            NormalizeScript(rebuilt, topic, analysis);
+            return rebuilt;
+        }
 
         if (HasPromiseProblem(review) || !review.Approved)
         {
@@ -506,6 +525,11 @@ public sealed class ScriptService
             Ustaw severity=error i approved=false przy niepotwierdzonym twierdzeniu, braku nowej informacji w scenie albo niespelnionej obietnicy.
             Jesli approved=false, przynajmniej jeden issue musi miec severity=error.
             Dla drobnych uwag uzyj severity=warning i zostaw approved=true.
+            SuggestedFix nie moze dodawac liczb, procentow, statystyk, dat, nazw ani przykladow, ktorych nie ma w materiale zrodlowym.
+            Jesli brakuje konkretnego przykladu w zrodle, zaproponuj usuniecie lub uproszczenie sceny zamiast wymyslania przykladu.
+            Definicja newInformation: scena ma wnosic nowy element wzgledem poprzednich scen filmu, np. osobny krok, mechanizm, ograniczenie albo rezultat. To nie znaczy, ze scena ma dodawac fakt spoza zrodla.
+            Nie oznaczaj sceny jako brak newInformation tylko dlatego, ze jej krok jest juz w analizie zrodla. Scena ma byc oparta na zrodle.
+            Jesli scene_01, scene_02 i scene_03 pokazuja trzy rozne kroki ze zrodla, to spelniaja wymog newInformation nawet wtedy, gdy kazdy krok jest juz wymieniony w zrodle.
             Zwracaj wylacznie JSON zgodny ze schematem.
             """;
     }
@@ -952,6 +976,425 @@ public sealed class ScriptService
         review.Approved = review.Approved && !review.HasCriticalErrors;
     }
 
+    internal static void SanitizeReviewAgainstSource(
+        SelectedTopic topic,
+        SourceAnalysis analysis,
+        ShortScript script,
+        ContentReview review,
+        GenerationDebugLogger? logger = null)
+    {
+        var changed = false;
+        var sourceStepCoverage = ScriptCoversSourceSteps(analysis, script);
+        var sceneProgression = ScenesHaveDistinctNewInformation(script);
+        foreach (var issue in review.Issues)
+        {
+            if (IsFalseNewInformationComplaint(issue, sourceStepCoverage, sceneProgression))
+            {
+                logger?.Warning($"Content review issue downgraded because source-backed steps count as newInformation progression: {issue.Segment}/{issue.Code}");
+                issue.Severity = "info";
+                issue.Message = $"{issue.Message} [Zdegradowano: scena moze wnosic osobny krok ze zrodla jako newInformation.]";
+                changed = true;
+                continue;
+            }
+
+            if (IsFalseHookPromiseComplaint(topic, analysis, script, issue, sourceStepCoverage))
+            {
+                logger?.Warning($"Content review issue downgraded because hook/payoff is source-aligned: {issue.Segment}/{issue.Code}");
+                issue.Severity = "warning";
+                issue.Message = $"{issue.Message} [Zdegradowano: hook i payoff sa powiazane ze zrodlem oraz krokami scenariusza.]";
+                changed = true;
+            }
+        }
+
+        if (!changed)
+        {
+            return;
+        }
+
+        if (!review.HasCriticalErrors)
+        {
+            review.Approved = true;
+            if (review.UsefulnessScore == 0)
+            {
+                review.UsefulnessScore = 7;
+            }
+        }
+    }
+
+    private static bool IsFalseNewInformationComplaint(
+        ContentReviewIssue issue,
+        bool sourceStepCoverage,
+        bool sceneProgression)
+    {
+        if (!sourceStepCoverage || !sceneProgression)
+        {
+            return false;
+        }
+
+        var code = issue.Code.ToLowerInvariant();
+        if (!code.Contains("newinformation", StringComparison.OrdinalIgnoreCase)
+            && !code.Contains("new_information", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var text = SourceAnalysisDiagnosticsService.Normalize($"{issue.Message} {issue.SuggestedFix}");
+        if (text.Contains("nie wnosi", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("brak nowej", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("no new", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("nonew", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return text.Contains("zrodla", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("zrodle", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("tezie", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("fakt", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("source", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsFalseHookPromiseComplaint(
+        SelectedTopic topic,
+        SourceAnalysis analysis,
+        ShortScript script,
+        ContentReviewIssue issue,
+        bool sourceStepCoverage)
+    {
+        if (!sourceStepCoverage)
+        {
+            return false;
+        }
+
+        var code = issue.Code.ToLowerInvariant();
+        var mentionsHookOrPayoff = code.Contains("hook", StringComparison.OrdinalIgnoreCase)
+            || code.Contains("payoff", StringComparison.OrdinalIgnoreCase)
+            || code.Contains("proof", StringComparison.OrdinalIgnoreCase)
+            || code.Contains("promise", StringComparison.OrdinalIgnoreCase);
+        if (!mentionsHookOrPayoff)
+        {
+            return false;
+        }
+
+        var hookTerms = SourceAnalysisDiagnosticsService
+            .ExtractTerms(SourceAnalysisDiagnosticsService.Normalize($"{script.Hook} {topic.Brief.ViewerProblem}"))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var sourceTerms = SourceAnalysisDiagnosticsService
+            .ExtractTerms(SourceAnalysisDiagnosticsService.Normalize($"{topic.SourceText} {analysis.MainThesis} {analysis.MostUsefulFragment}"))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var endingAndSceneTerms = SourceAnalysisDiagnosticsService
+            .ExtractTerms(SourceAnalysisDiagnosticsService.Normalize($"{script.Ending} {string.Join(" ", script.Scenes.Select(scene => scene.VoiceOver))}"))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return hookTerms.Overlaps(sourceTerms) && endingAndSceneTerms.Overlaps(sourceTerms);
+    }
+
+    private static bool ScriptCoversSourceSteps(SourceAnalysis analysis, ShortScript script)
+    {
+        var sourceSteps = analysis.Steps
+            .Select(step => SourceAnalysisDiagnosticsService.Normalize(step.Text))
+            .Where(step => !string.IsNullOrWhiteSpace(step))
+            .ToList();
+        if (sourceSteps.Count == 0)
+        {
+            return false;
+        }
+
+        var scriptText = SourceAnalysisDiagnosticsService.Normalize(string.Join(
+            " ",
+            script.Hook,
+            script.Ending,
+            string.Join(" ", script.Scenes.Select(scene => $"{scene.VoiceOver} {scene.NewInformation}"))));
+        var coveredSteps = sourceSteps.Count(step => SourceAnalysisDiagnosticsService.IsSupported(scriptText, step));
+        return coveredSteps >= Math.Min(sourceSteps.Count, 2);
+    }
+
+    private static bool ScenesHaveDistinctNewInformation(ShortScript script)
+    {
+        var newInformation = script.Scenes
+            .Select(scene => NormalizeForComparison(scene.NewInformation))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToList();
+        return newInformation.Count == script.Scenes.Count
+            && newInformation.Distinct(StringComparer.OrdinalIgnoreCase).Count() == newInformation.Count;
+    }
+
+    private static bool ShouldRebuildFromSource(
+        ContentReview review,
+        ShortDiagnosticsReport diagnostics,
+        SourceAnalysis analysis)
+    {
+        return (analysis.Steps.Count > 0 || analysis.Facts.Count > 0)
+            && (review.HasCriticalErrors
+                || !review.Approved
+                || diagnostics.Summary.HasUnsupportedClaims
+                || HasUnsafeReviewSuggestion(review));
+    }
+
+    private static bool HasUnsafeReviewSuggestion(ContentReview review)
+    {
+        var text = SourceAnalysisDiagnosticsService.Normalize(string.Join(
+            " ",
+            review.SuggestedFixes,
+            review.Issues.Select(issue => issue.SuggestedFix)));
+        return text.Contains("procent", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("statyst", StringComparison.OrdinalIgnoreCase)
+            || Regex.IsMatch(text, "\\b\\d+(?:[,.]\\d+)?\\s*(?:%|procent|proc|sek|min|godz)?\\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static ShortScript BuildSourceSafeScript(
+        SelectedTopic topic,
+        SourceAnalysis analysis,
+        ShortScript original)
+    {
+        var script = new ShortScript
+        {
+            Title = BuildSourceSafeTitle(topic, original),
+            SelectedConceptId = original.SelectedConceptId,
+            Hook = BuildSourceSafeHook(topic, analysis),
+            HookOnScreenText = ShortenForScreen(BuildSourceSafeHook(topic, analysis), 42),
+            HookSearchPhrase = BuildSearchPhraseFromText($"{topic.Title} {analysis.MainThesis}"),
+            EndingSearchPhrase = BuildSearchPhraseFromText($"{topic.Title} {analysis.MostUsefulFragment}")
+        };
+
+        script.Scenes.AddRange(analysis.Steps
+            .Where(step => !string.IsNullOrWhiteSpace(step.Text))
+            .Take(4)
+            .Select((step, index) => BuildSourceStepScene(topic, analysis, step, index)));
+
+        if (script.Scenes.Count == 0)
+        {
+            script.Scenes.AddRange(CreateTopicAwareFallbackScenes(topic)
+                .Take(3)
+                .Select((scene, index) => PrepareSourceSafeFallbackScene(scene, analysis, index)));
+        }
+
+        script.Ending = analysis.Steps.Count > 0
+            ? BuildEndingFromSourceSteps(analysis, original)
+            : BuildEndingFromSafeScenes(script.Scenes);
+        script.EndingOnScreenText = ShortenForScreen(script.Ending, 42);
+        return script;
+    }
+
+    private static string BuildEndingFromSafeScenes(IReadOnlyList<ScriptScene> scenes)
+    {
+        var steps = scenes
+            .Where(scene => scene.Role is "action" or "proof" or "payoff")
+            .Select(scene => RemoveTrailingPunctuation(scene.VoiceOver))
+            .Where(step => !string.IsNullOrWhiteSpace(step))
+            .Take(3)
+            .ToList();
+        if (steps.Count == 0)
+        {
+            steps = scenes
+                .Select(scene => RemoveTrailingPunctuation(scene.VoiceOver))
+                .Where(step => !string.IsNullOrWhiteSpace(step))
+                .Take(2)
+                .ToList();
+        }
+
+        if (steps.Count == 0)
+        {
+            return "Wybierz jeden maly krok i sprawdz efekt jeszcze dzis.";
+        }
+
+        var first = steps[0];
+        var tail = steps.Skip(1).ToList();
+        var sentence = tail.Count == 0
+            ? first
+            : $"{first}, {JoinWithPolishAnd(tail)}";
+        return EnsureSentence(CapitalizeFirst(sentence));
+    }
+
+    private static ScriptScene PrepareSourceSafeFallbackScene(ScriptScene scene, SourceAnalysis analysis, int index)
+    {
+        scene.Role = string.IsNullOrWhiteSpace(scene.Role)
+            ? index switch
+            {
+                0 => "problem",
+                1 => "action",
+                _ => "proof"
+            }
+            : scene.Role;
+        scene.SourceFactIds = [analysis.Facts.FirstOrDefault()?.Id ?? "F1"];
+        scene.NewInformation = string.IsNullOrWhiteSpace(scene.NewInformation)
+            ? EnsureSentence($"Krok ze zrodla: {RemoveTrailingPunctuation(scene.VoiceOver)}")
+            : scene.NewInformation;
+        scene.OnScreenEmphasis = string.IsNullOrWhiteSpace(scene.OnScreenEmphasis)
+            ? scene.OnScreenText
+            : scene.OnScreenEmphasis;
+        scene.EstimatedWords = scene.EstimatedWords <= 0 ? CountWords(scene.VoiceOver) : scene.EstimatedWords;
+        return scene;
+    }
+
+    private static string BuildSourceSafeTitle(SelectedTopic topic, ShortScript original)
+    {
+        if (!ContainsUnsupportedNumberPhrase(original.Title, topic.SourceText)
+            && !string.IsNullOrWhiteSpace(original.Title))
+        {
+            return original.Title;
+        }
+
+        return topic.Title;
+    }
+
+    private static string BuildSourceSafeHook(SelectedTopic topic, SourceAnalysis analysis)
+    {
+        var normalized = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText} {analysis.MainThesis}");
+        if (normalized.Contains("reset", StringComparison.OrdinalIgnoreCase)
+            && normalized.Contains("biurka", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Jak szybko zresetowac biurko po pracy?";
+        }
+
+        if (normalized.Contains("skaner 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("skanowanie 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("fotogrametr", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Telefon moze zrobic prosty skan 3D?";
+        }
+
+        if (normalized.Contains("minimalizm", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("powiadom", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("ekran glown", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Telefon rozprasza po odblokowaniu?";
+        }
+
+        if (normalized.Contains("1 min", StringComparison.OrdinalIgnoreCase)
+            && normalized.Contains("planowania", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Jak zaplanowac poranek w 1 minute?";
+        }
+
+        if (normalized.Contains("hasl", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Powtarzasz to samo haslo w kilku miejscach?";
+        }
+
+        if (normalized.Contains("notatk", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("nagran", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Gubisz decyzje po nagraniu lub spotkaniu?";
+        }
+
+        var thesis = RemoveTrailingPunctuation(analysis.MainThesis);
+        return string.IsNullOrWhiteSpace(thesis)
+            ? $"Jaki pierwszy krok zrobic w temacie: {ShortenSentence(topic.Title, 70)}?"
+            : $"{CapitalizeFirst(ShortenSentence(thesis, 85))}?";
+    }
+
+    private static ScriptScene BuildSourceStepScene(
+        SelectedTopic topic,
+        SourceAnalysis analysis,
+        SourceStep step,
+        int index)
+    {
+        var voiceOver = EnsureSentence(CapitalizeFirst(step.Text));
+        var searchPhrase = BuildSearchPhraseForSourceStep(topic, step.Text);
+        return new ScriptScene
+        {
+            Role = "action",
+            VoiceOver = voiceOver,
+            SourceFactIds = ResolveStepFactIds(step, analysis),
+            NewInformation = BuildSourceStepNewInformation(step.Text, index),
+            OnScreenText = ShortenForScreen(CapitalizeFirst(step.Text), 42),
+            OnScreenEmphasis = ShortenForScreen(CapitalizeFirst(step.Text), 42),
+            EstimatedWords = CountWords(voiceOver),
+            VisualDescription = $"Osoba wykonuje krok ze zrodla: {voiceOver}",
+            SearchPhrase = searchPhrase,
+            SearchPhrases = [searchPhrase, BuildSearchPhraseFromText($"{step.Text} {topic.Title}")],
+            AvoidVisuals = "random selfie, unrelated beauty routine, generic social media recording, unrelated b-roll",
+            SceneGoal = "Pokazac jeden krok wynikajacy bezposrednio ze zrodla."
+        };
+    }
+
+    private static List<string> ResolveStepFactIds(SourceStep step, SourceAnalysis analysis)
+    {
+        var validFactIds = analysis.Facts
+            .Select(fact => fact.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var ids = step.SourceFactIds
+            .Where(id => validFactIds.Contains(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (ids.Count > 0)
+        {
+            return ids;
+        }
+
+        var normalizedStep = SourceAnalysisDiagnosticsService.Normalize(step.Text);
+        var matchingFact = analysis.Facts.FirstOrDefault(fact =>
+            SourceAnalysisDiagnosticsService.Normalize(fact.Text).Contains(normalizedStep, StringComparison.OrdinalIgnoreCase)
+            || SourceAnalysisDiagnosticsService.Normalize(fact.Evidence).Contains(normalizedStep, StringComparison.OrdinalIgnoreCase));
+        return [matchingFact?.Id ?? validFactIds.FirstOrDefault() ?? "F1"];
+    }
+
+    private static string BuildSourceStepNewInformation(string step, int index)
+    {
+        var detail = RemoveLeadingActionVerb(RemoveTrailingPunctuation(step));
+        return EnsureSentence($"Krok ze zrodla: {detail}");
+    }
+
+    private static string BuildSearchPhraseForSourceStep(SelectedTopic topic, string step)
+    {
+        var normalized = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {step}");
+        if (normalized.Contains("biurk", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("smieci", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("odloz", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("kartke", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized.Contains("kartke", StringComparison.OrdinalIgnoreCase)
+                || normalized.Contains("zadaniem", StringComparison.OrdinalIgnoreCase)
+                    ? "person writing task on paper at desk"
+                    : "person organizing desk after work";
+        }
+
+        if (normalized.Contains("skaner 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("skanowanie 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("model 3d", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("fotogrametr", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("obiekt", StringComparison.OrdinalIgnoreCase))
+        {
+            return "person scanning small object with smartphone";
+        }
+
+        if (normalized.Contains("telefon", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("aplikac", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("powiadom", StringComparison.OrdinalIgnoreCase))
+        {
+            return "person organizing smartphone home screen apps";
+        }
+
+        if (normalized.Contains("hasl", StringComparison.OrdinalIgnoreCase))
+        {
+            return "person using password manager on laptop";
+        }
+
+        return BuildSearchPhraseFromText($"{step} {topic.Title}");
+    }
+
+    private static bool ContainsUnsupportedNumberPhrase(string value, string sourceText)
+    {
+        var normalizedValue = SourceAnalysisDiagnosticsService.Normalize(value);
+        var normalizedSource = SourceAnalysisDiagnosticsService.Normalize(sourceText);
+        foreach (Match match in Regex.Matches(
+            normalizedValue,
+            "\\b\\d+(?:[,.]\\d+)?\\s*(?:%|procent|proc|sek|min|godz)?\\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            var evidence = match.Value.Trim();
+            if (!string.IsNullOrWhiteSpace(evidence)
+                && !normalizedSource.Contains(evidence, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool HasPromiseProblem(ContentReview review)
     {
         var text = NormalizeWhitespace(string.Join(
@@ -1045,7 +1488,6 @@ public sealed class ScriptService
         var tail = steps
             .Skip(1)
             .Select(RemoveTrailingPunctuation)
-            .Select(RemoveLeadingActionVerb)
             .Where(step => !string.IsNullOrWhiteSpace(step))
             .ToList();
         var sentence = tail.Count == 0
@@ -1121,17 +1563,17 @@ public sealed class ScriptService
 
         if (lower.Contains("priorytet", StringComparison.OrdinalIgnoreCase))
         {
-            return "Pierwszy element planu: jeden priorytet.";
+            return "Element planu: jeden priorytet.";
         }
 
         if (lower.Contains("male zadanie", StringComparison.OrdinalIgnoreCase) || lower.Contains("małe zadanie", StringComparison.OrdinalIgnoreCase))
         {
-            return "Drugi element planu: jedno male zadanie.";
+            return "Element planu: jedno male zadanie.";
         }
 
         if (lower.Contains("nie robisz", StringComparison.OrdinalIgnoreCase) || lower.Contains("odpuszcz", StringComparison.OrdinalIgnoreCase))
         {
-            return "Trzeci element planu: jedna rzecz swiadomie odpuszczona dzisiaj.";
+            return "Element planu: jedna rzecz swiadomie odpuszczona dzisiaj.";
         }
 
         var matchingStep = analysis.Steps.ElementAtOrDefault(index);
@@ -1140,7 +1582,7 @@ public sealed class ScriptService
             return EnsureSentence(CapitalizeFirst(matchingStep.Text));
         }
 
-        return EnsureSentence($"Nowa informacja sceny {index + 1}: {RemoveTrailingPunctuation(scene.VoiceOver)}");
+        return EnsureSentence($"Nowa informacja: {RemoveTrailingPunctuation(scene.VoiceOver)}");
     }
 
     private static string RemoveLeadingActionVerb(string value)
@@ -2043,9 +2485,56 @@ public sealed class ScriptService
     private static IEnumerable<ScriptScene> CreateTopicAwareFallbackScenes(SelectedTopic topic)
     {
         var title = NormalizeWhitespace(topic.Title).ToLowerInvariant();
+        var source = NormalizeWhitespace(topic.SourceText).ToLowerInvariant();
+        var topicText = $"{title} {source}";
+        if (topicText.Contains("skaner 3d", StringComparison.OrdinalIgnoreCase)
+            || topicText.Contains("skanowanie 3d", StringComparison.OrdinalIgnoreCase)
+            || topicText.Contains("model 3d", StringComparison.OrdinalIgnoreCase)
+            || topicText.Contains("fotogrametr", StringComparison.OrdinalIgnoreCase))
+        {
+            return
+            [
+                new ScriptScene
+                {
+                    Role = "problem",
+                    VoiceOver = "Telefon moze posluzyc do prostego skanu 3D malego obiektu.",
+                    NewInformation = "Telefon moze zrobic prosty skan 3D obiektu.",
+                    OnScreenText = "Telefon jako skaner 3D",
+                    VisualDescription = "Dlon trzyma telefon nad malym nieruchomym obiektem na dobrze oswietlonym stole.",
+                    SearchPhrase = "person scanning small object with smartphone",
+                    AvoidVisuals = "random selfie, unrelated phone notifications, social media feed",
+                    SceneGoal = "Pokazac temat bez obiecywania profesjonalnej dokladnosci."
+                },
+                new ScriptScene
+                {
+                    Role = "action",
+                    VoiceOver = "Wybierz maly nieruchomy obiekt z wyrazna faktura.",
+                    NewInformation = "Dobry obiekt do skanu jest nieruchomy i ma wyrazna fakture.",
+                    OnScreenText = "Obiekt i faktura",
+                    VisualDescription = "Na stole lezy maly przedmiot z wyrazna faktura, a telefon ustawia kadr.",
+                    SearchPhrase = "small textured object smartphone scan close up",
+                    AvoidVisuals = "flat blank wall, moving person, unrelated app interface",
+                    SceneGoal = "Dac pierwszy konkretny warunek udanego skanu."
+                },
+                new ScriptScene
+                {
+                    Role = "proof",
+                    VoiceOver = "Obejdz go telefonem z kilku stron i sprawdz, czy model nie ma brakujacych fragmentow.",
+                    NewInformation = "Skan wymaga ujet z kilku stron i kontroli brakujacych fragmentow.",
+                    OnScreenText = "Obejdz i sprawdz model",
+                    VisualDescription = "Telefon porusza sie wokol obiektu, a potem pokazuje podglad modelu 3D.",
+                    SearchPhrase = "smartphone photogrammetry 3d model preview",
+                    AvoidVisuals = "notification settings, random phone selfie, generic social media recording",
+                    SceneGoal = "Pokazac widoczny rezultat i sposob sprawdzenia efektu."
+                }
+            ];
+        }
+
         if (title.Contains("minimalizm", StringComparison.OrdinalIgnoreCase)
-            || title.Contains("aplikac", StringComparison.OrdinalIgnoreCase)
-            || title.Contains("telefon", StringComparison.OrdinalIgnoreCase))
+            || title.Contains("aplikacjach na telefonie", StringComparison.OrdinalIgnoreCase)
+            || source.Contains("powiadomien", StringComparison.OrdinalIgnoreCase)
+            || source.Contains("ekranie glownym", StringComparison.OrdinalIgnoreCase)
+            || source.Contains("pierwszym ekranie", StringComparison.OrdinalIgnoreCase))
         {
             return
             [

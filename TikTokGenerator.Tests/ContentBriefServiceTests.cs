@@ -37,6 +37,24 @@ public sealed class ContentBriefServiceTests
     }
 
     [Fact]
+    public void CreateForTopic_WhenPhone3DScannerTopic_ReturnsScannerSpecificBrief()
+    {
+        var brief = ContentBriefService.CreateForTopic(
+            "Ciekawostka technologiczna: telefon jako skaner 3D",
+            """
+            Praktyczna teza: telefon moze posluzyc do prostego skanu 3D obiektu.
+            Konkretne kroki: wybierz maly nieruchomy obiekt, obejdz go telefonem z kilku stron, sprawdz czy model nie ma brakujacych fragmentow.
+            """,
+            "Technologia");
+
+        Assert.Contains("telefon", brief.Audience, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("model 3D", brief.ViewerProblem, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("skan", brief.DesiredOutcome, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("powiadomien", brief.ViewerProblem, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("pierwszy ekran", brief.DesiredOutcome, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void FillMissing_WhenBriefHasEmptyValues_UsesThematicFallback()
     {
         var fallback = ContentBriefService.CreateForTopic(

@@ -78,6 +78,16 @@ public static class SourceAnalysisDiagnosticsService
             });
         }
 
+        if (analysis.Steps.Count == 0)
+        {
+            var sourceSteps = CreateStepsFromSourceLabels(topic.SourceText, analysis.Facts[0].Id);
+            if (sourceSteps.Count > 0)
+            {
+                logger?.Warning($"Source analysis recovered {sourceSteps.Count} steps from source labels after removing unsupported model steps.");
+                analysis.Steps.AddRange(sourceSteps);
+            }
+        }
+
         if (!IsSupported(source, analysis.MainThesis))
         {
             logger?.Warning($"Source analysis mainThesis was unsupported and replaced. Original={analysis.MainThesis}");
@@ -242,6 +252,42 @@ public static class SourceAnalysisDiagnosticsService
             .Select(value => Regex.Replace(value.Trim(), "\\s+", " ", RegexOptions.CultureInvariant))
             .FirstOrDefault(value => value.Length > 0)
             ?? sourceText.Trim();
+    }
+
+    private static List<SourceStep> CreateStepsFromSourceLabels(string sourceText, string factId)
+    {
+        var stepsText = ExtractLabelValue(sourceText, "Konkretne kroki");
+        if (string.IsNullOrWhiteSpace(stepsText))
+        {
+            return [];
+        }
+
+        return Regex.Split(stepsText, @",|\boraz\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+            .Select(value => Regex.Replace(value.Trim(), "\\s+", " ", RegexOptions.CultureInvariant)
+                .Trim('.', '!', '?', ':', ';', ','))
+            .Where(value => value.Length > 0)
+            .Take(4)
+            .Select((value, index) => new SourceStep
+            {
+                Id = $"S{index + 1}",
+                Text = value,
+                SourceFactIds = [factId]
+            })
+            .ToList();
+    }
+
+    private static string ExtractLabelValue(string sourceText, string label)
+    {
+        if (string.IsNullOrWhiteSpace(sourceText))
+        {
+            return string.Empty;
+        }
+
+        var match = Regex.Match(
+            sourceText,
+            $@"{Regex.Escape(label)}\s*:\s*(?<value>.+?)(?:\r?\n|$)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return match.Success ? match.Groups["value"].Value.Trim() : string.Empty;
     }
 
     private static string NormalizeNumberWords(string value)
