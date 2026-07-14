@@ -33,7 +33,11 @@ public sealed class VoiceService
         {
             var audioPath = Path.Combine(outputDirectory, $"{rawSegment.Index:00}_{rawSegment.Name}.wav");
             var textPath = Path.ChangeExtension(audioPath, ".txt");
+            var screenTextPath = Path.Combine(outputDirectory, $"{rawSegment.Index:00}_{rawSegment.Name}.screen.txt");
+            var visualTextPath = Path.Combine(outputDirectory, $"{rawSegment.Index:00}_{rawSegment.Name}.visual.txt");
             await File.WriteAllTextAsync(textPath, rawSegment.Text, cancellationToken);
+            await File.WriteAllTextAsync(screenTextPath, rawSegment.OnScreenText, cancellationToken);
+            await File.WriteAllTextAsync(visualTextPath, rawSegment.VisualDescription, cancellationToken);
             logger?.Info($"Generating voice segment index={rawSegment.Index} name={rawSegment.Name} textLength={rawSegment.Text.Length}");
 
             await RunPiperAsync(piperPath, modelPath, rawSegment.Text, audioPath, cancellationToken);
@@ -45,6 +49,8 @@ public sealed class VoiceService
                 Index = rawSegment.Index,
                 Name = rawSegment.Name,
                 Text = rawSegment.Text,
+                OnScreenText = rawSegment.OnScreenText,
+                VisualDescription = rawSegment.VisualDescription,
                 SearchPhrase = rawSegment.SearchPhrase,
                 AudioPath = audioPath,
                 Duration = duration
@@ -57,21 +63,39 @@ public sealed class VoiceService
     private static IReadOnlyList<RawVoiceSegment> CreateRawSegments(ShortScript script)
     {
         var segments = new List<RawVoiceSegment>();
-        var firstSearchPhrase = script.Scenes.First().SearchPhrase;
-        var lastSearchPhrase = script.Scenes.Last().SearchPhrase;
+        var firstSearchPhrase = string.IsNullOrWhiteSpace(script.HookSearchPhrase)
+            ? script.Scenes.First().SearchPhrase
+            : script.HookSearchPhrase;
+        var lastSearchPhrase = string.IsNullOrWhiteSpace(script.EndingSearchPhrase)
+            ? script.Scenes.Last().SearchPhrase
+            : script.EndingSearchPhrase;
 
-        segments.Add(new RawVoiceSegment(0, "hook", script.Hook, firstSearchPhrase));
+        segments.Add(new RawVoiceSegment(
+            0,
+            "hook",
+            script.Hook,
+            script.HookOnScreenText,
+            "Hook otwierajacy short: kadr ma natychmiast pokazac problem lub praktyczny kontekst.",
+            firstSearchPhrase));
 
         for (var i = 0; i < script.Scenes.Count; i++)
         {
             segments.Add(new RawVoiceSegment(
                 i + 1,
                 $"scene_{i + 1:00}",
-                script.Scenes[i].Text,
+                script.Scenes[i].VoiceOver,
+                script.Scenes[i].OnScreenText,
+                script.Scenes[i].VisualDescription,
                 script.Scenes[i].SearchPhrase));
         }
 
-        segments.Add(new RawVoiceSegment(segments.Count, "ending", script.Ending, lastSearchPhrase));
+        segments.Add(new RawVoiceSegment(
+            segments.Count,
+            "ending",
+            script.Ending,
+            script.EndingOnScreenText,
+            "Zakonczenie shorta: kadr powinien domykac praktyczna obietnice.",
+            lastSearchPhrase));
         return segments;
     }
 
@@ -162,5 +186,11 @@ public sealed class VoiceService
         return TimeSpan.FromSeconds(Math.Max(seconds, 0.5));
     }
 
-    private sealed record RawVoiceSegment(int Index, string Name, string Text, string SearchPhrase);
+    private sealed record RawVoiceSegment(
+        int Index,
+        string Name,
+        string Text,
+        string OnScreenText,
+        string VisualDescription,
+        string SearchPhrase);
 }

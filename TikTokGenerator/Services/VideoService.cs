@@ -41,7 +41,7 @@ public sealed class VideoService
                 $"Montuje segment {i + 1}/{voiceSegments.Count}"));
 
             var subtitlePath = Path.Combine(subtitleDirectory, $"{segment.Index:00}_{segment.Name}.png");
-            CreateSubtitleImage(segment.Text, subtitlePath);
+            CreateSubtitleImage(segment.OnScreenText, subtitlePath);
             logger?.Info($"Created subtitle image segment={segment.Index} path={subtitlePath}");
 
             var segmentPath = Path.Combine(segmentDirectory, $"{segment.Index:00}_{segment.Name}.mp4");
@@ -249,6 +249,9 @@ public sealed class VideoService
         };
 
         lines.AddRange(clips.Select(clip => $"{clip.AuthorName} - {clip.PexelsUrl}"));
+        lines.Add(string.Empty);
+        lines.Add("Clip diagnostics:");
+        lines.AddRange(clips.Select(clip => $"Segment {clip.SegmentIndex:00}: rank={clip.PexelsRank}; query={clip.SearchPhrase}; visual={clip.VisualDescription}; reason={clip.SelectionReason}"));
         await File.WriteAllLinesAsync(creditsPath, lines, cancellationToken);
     }
 

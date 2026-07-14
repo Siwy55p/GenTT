@@ -51,6 +51,9 @@ public sealed class ShortGenerator
             var audioDirectory = Path.Combine(projectDirectory, "audio");
             var voiceSegments = await _voiceService.GenerateVoiceAsync(script, audioDirectory, options, logger, cancellationToken);
             await logger.SaveJsonAsync("voice-segments.json", voiceSegments, cancellationToken);
+            var voiceDiagnostics = ShortDiagnosticsService.CreateVoiceDiagnostics(topic, script, voiceSegments);
+            await logger.SaveJsonAsync("voice-analysis.json", voiceDiagnostics, cancellationToken);
+            ShortDiagnosticsService.LogSummary(logger, "Voice", voiceDiagnostics);
 
             progress?.Report(new ShortGenerationProgress(45, "Pobieram klipy z Pexels"));
             var videoDirectory = Path.Combine(projectDirectory, "videos");
@@ -62,6 +65,9 @@ public sealed class ShortGenerator
                 logger,
                 cancellationToken);
             await logger.SaveJsonAsync("pexels-clips.json", clips, cancellationToken);
+            var clipDiagnostics = ShortDiagnosticsService.CreateClipDiagnostics(topic, script, voiceSegments, clips);
+            await logger.SaveJsonAsync("clip-analysis.json", clipDiagnostics, cancellationToken);
+            ShortDiagnosticsService.LogSummary(logger, "Clips", clipDiagnostics);
 
             progress?.Report(new ShortGenerationProgress(70, "Montuje film w FFmpeg"));
             var outputPath = await _videoService.RenderVideoAsync(
@@ -72,6 +78,9 @@ public sealed class ShortGenerator
                 progress,
                 logger,
                 cancellationToken);
+            var finalDiagnostics = ShortDiagnosticsService.CreateFinalDiagnostics(topic, script, voiceSegments, clips, outputPath);
+            await logger.SaveJsonAsync("short-diagnostics.json", finalDiagnostics, cancellationToken);
+            ShortDiagnosticsService.LogSummary(logger, "Final", finalDiagnostics);
 
             await SaveJsonAsync(
                 Path.Combine(projectDirectory, "project.json"),
@@ -81,6 +90,7 @@ public sealed class ShortGenerator
                     script,
                     voiceSegments,
                     clips,
+                    diagnostics = finalDiagnostics,
                     outputPath,
                     debugLogPath = logger.LogPath,
                     createdAt = DateTimeOffset.Now
