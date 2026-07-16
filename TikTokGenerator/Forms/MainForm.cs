@@ -155,25 +155,6 @@ public partial class MainForm : Form
         }
     }
 
-    private Trend GetSelectedTrend(string topic)
-    {
-        if (trendsListBox.SelectedItem is Trend selectedTrend &&
-            selectedTrend.Title.Equals(topic, StringComparison.OrdinalIgnoreCase))
-        {
-            return selectedTrend;
-        }
-
-        return new Trend(
-            Rank: 1,
-            Title: topic,
-            Country: countryComboBox.Text,
-            Category: categoryComboBox.Text,
-            Source: "Wpisane recznie",
-            SourceText: sourceTextTextBox.Text.Trim(),
-            SourceUrl: sourceUrlTextBox.Text.Trim(),
-            DiscoveredAt: DateTimeOffset.Now);
-    }
-
     private void TrendsListBox_SelectedIndexChanged(object? sender, EventArgs e)
     {
         if (trendsListBox.SelectedItem is Trend trend)

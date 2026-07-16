@@ -62,6 +62,24 @@ public sealed class ShortDiagnosticsServiceTests
     }
 
     [Fact]
+    public void CreateVoiceDiagnostics_WhenAudioFitsBriefDuration_DoesNotUseDefaultDuration()
+    {
+        var topic = CreateTopic(durationSeconds: 30);
+        var script = CreateScript();
+        var segments = new[]
+        {
+            CreateVoiceSegment(0, "hook", TimeSpan.FromSeconds(8)),
+            CreateVoiceSegment(1, "scene_01", TimeSpan.FromSeconds(9)),
+            CreateVoiceSegment(2, "scene_02", TimeSpan.FromSeconds(9))
+        };
+
+        var report = ShortDiagnosticsService.CreateVoiceDiagnostics(topic, script, segments);
+
+        Assert.DoesNotContain(report.Issues, issue => issue.Code == "total_duration_over_target");
+        Assert.True(report.Summary.EstimatedDurationSeconds > 25);
+    }
+
+    [Fact]
     public void CreateScriptDiagnostics_WhenOnScreenTextAddsUnsupportedNumber_FlagsUnsupportedNumber()
     {
         var topic = new SelectedTopic
@@ -154,13 +172,17 @@ public sealed class ShortDiagnosticsServiceTests
         Assert.DoesNotContain(report.Issues, issue => issue.Code == "missing_action_verb");
     }
 
-    private static SelectedTopic CreateTopic()
+    private static SelectedTopic CreateTopic(int durationSeconds = 25)
     {
         return new SelectedTopic
         {
             Title = "Testowy short",
             SourceUrl = "offline://test",
-            SourceText = "Pokaz prosty problem, jeden krok i sprawdzenie efektu."
+            SourceText = "Pokaz prosty problem, jeden krok i sprawdzenie efektu.",
+            Brief = new ContentBrief
+            {
+                DurationSeconds = durationSeconds
+            }
         };
     }
 

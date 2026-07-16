@@ -107,11 +107,6 @@ public static class SourceAnalysisDiagnosticsService
         return analysis;
     }
 
-    public static bool IsSupportedBySource(SelectedTopic topic, string value)
-    {
-        return IsSupported(Normalize(topic.SourceText), value);
-    }
-
     internal static bool IsSupported(string normalizedSource, string value)
     {
         var normalizedValue = Normalize(value);

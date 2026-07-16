@@ -244,7 +244,6 @@ TikTokGenerator/
 |   +-- ShortGenerationProgress.cs
 |   +-- ShortGeneratorOptions.cs
 |   +-- Trend.cs
-|   +-- VideoProject.cs
 +-- Tools/
 |   +-- Piper/
 +-- Output/

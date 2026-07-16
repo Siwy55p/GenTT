@@ -10,7 +10,7 @@ public sealed class TrendServiceTests
     [InlineData("Lifestyle")]
     public async Task FindPopularTopicsAsync_ForBuiltInCategories_ReturnsConcreteSourceForEveryTopic(string category)
     {
-        var service = new TrendService(new HttpClient());
+        var service = new TrendService();
 
         var topics = await service.FindPopularTopicsAsync("Polska", category);
 
@@ -29,7 +29,7 @@ public sealed class TrendServiceTests
     [Fact]
     public async Task FindPopularTopicsAsync_WhenTechnologyScannerTopic_ReturnsSourceWithConcrete3DScanSteps()
     {
-        var service = new TrendService(new HttpClient());
+        var service = new TrendService();
 
         var topics = await service.FindPopularTopicsAsync("Polska", "Technologia");
         var scannerTopic = topics.Single(topic =>

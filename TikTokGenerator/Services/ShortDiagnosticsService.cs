@@ -103,7 +103,8 @@ internal static class ShortDiagnosticsService
             AddVoiceSegmentIssues(report, diagnostics, input.AudioPath);
         }
 
-        if (report.Segments.Sum(segment => segment.DurationSeconds) > 25)
+        var targetDurationSeconds = topic.Brief.DurationSeconds;
+        if (report.Segments.Sum(segment => segment.DurationSeconds) > targetDurationSeconds)
         {
             AddIssue(
                 report,
@@ -111,7 +112,7 @@ internal static class ShortDiagnosticsService
                 "voice",
                 "all",
                 "total_duration_over_target",
-                "Suma segmentow audio przekracza docelowe 25 sekund.",
+                $"Suma segmentow audio przekracza docelowe {targetDurationSeconds} sekund.",
                 $"{report.Segments.Sum(segment => segment.DurationSeconds):0.###}s",
                 "Skroc hook, zakonczenie albo liczbe scen.");
         }

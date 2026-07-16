@@ -4,13 +4,6 @@ namespace TikTokGenerator.Services;
 
 public sealed class TrendService
 {
-    private readonly HttpClient _httpClient;
-
-    public TrendService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
-
     public Task<IReadOnlyList<Trend>> FindPopularTopicsAsync(
         string country,
         string category,

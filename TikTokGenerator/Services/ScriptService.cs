@@ -15,11 +15,11 @@ public sealed class ScriptService
     private readonly IModelClient _modelClient;
 
     public ScriptService(HttpClient httpClient)
-        : this(httpClient, new ModelClient(httpClient))
+        : this(new ModelClient(httpClient))
     {
     }
 
-    public ScriptService(HttpClient httpClient, IModelClient modelClient)
+    public ScriptService(IModelClient modelClient)
     {
         _modelClient = modelClient;
     }

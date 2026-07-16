@@ -23,7 +23,7 @@ static class Program
         var videoService = new VideoService();
 
         Application.Run(new MainForm(
-            new TrendService(httpClient),
+            new TrendService(),
             new ShortGenerator(scriptService, voiceService, stockVideoService, videoService),
             appSettings));
     }    

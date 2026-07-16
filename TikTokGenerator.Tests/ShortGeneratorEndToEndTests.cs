@@ -100,7 +100,7 @@ public sealed class ShortGeneratorEndToEndTests
         IVideoService videoService)
     {
         return new ShortGenerator(
-            new ScriptService(new HttpClient(), modelClient),
+            new ScriptService(modelClient),
             new FakeVoiceService(),
             stockVideoService,
             videoService);

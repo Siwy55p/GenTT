@@ -237,6 +237,10 @@ public sealed class ShortGenerator
             logger.Info($"Generation finished. OutputPath={outputPath}");
             return outputPath;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.Error("Generation failed.", ex);
