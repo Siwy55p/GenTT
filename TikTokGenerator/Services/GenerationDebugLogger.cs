@@ -40,7 +40,7 @@ public sealed class GenerationDebugLogger
 
     public async Task SaveTextAsync(string fileName, string content, CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine(DirectoryPath, SanitizeFileName(fileName));
+        var path = Path.Combine(DirectoryPath, FileNameSanitizer.ForDebugFile(fileName));
         await File.WriteAllTextAsync(path, content, cancellationToken);
         Info($"Saved debug text: {path}");
     }
@@ -60,9 +60,4 @@ public sealed class GenerationDebugLogger
         }
     }
 
-    private static string SanitizeFileName(string value)
-    {
-        var invalidChars = Path.GetInvalidFileNameChars();
-        return new string(value.Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray());
-    }
 }

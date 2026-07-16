@@ -553,7 +553,9 @@ public sealed class ScriptService
         shortened.Ending = TakeWords(shortened.Ending, 10);
         shortened.EndingOnScreenText = ShortenForScreen(shortened.EndingOnScreenText, 42);
 
-        var remainingBudget = Math.Max(maxWords - CountWords(shortened.Hook) - CountWords(shortened.Ending), 8);
+        var remainingBudget = Math.Max(
+            maxWords - WordCounter.CountNormalizedWhitespace(shortened.Hook) - WordCounter.CountNormalizedWhitespace(shortened.Ending),
+            8);
         while (shortened.Scenes.Count > 1 && CountScriptWords(shortened) > maxWords)
         {
             shortened.Scenes.RemoveAt(shortened.Scenes.Count - 2);
@@ -565,7 +567,7 @@ public sealed class ScriptService
             scene.VoiceOver = TakeWords(scene.VoiceOver, perSceneBudget);
             scene.OnScreenText = ShortenForScreen(scene.OnScreenText, 42);
             scene.OnScreenEmphasis = scene.OnScreenText;
-            scene.EstimatedWords = CountWords(scene.VoiceOver);
+            scene.EstimatedWords = WordCounter.CountNormalizedWhitespace(scene.VoiceOver);
         }
 
         return shortened;
@@ -1449,7 +1451,7 @@ public sealed class ScriptService
         scene.OnScreenEmphasis = string.IsNullOrWhiteSpace(scene.OnScreenEmphasis)
             ? scene.OnScreenText
             : scene.OnScreenEmphasis;
-        scene.EstimatedWords = scene.EstimatedWords <= 0 ? CountWords(scene.VoiceOver) : scene.EstimatedWords;
+        scene.EstimatedWords = scene.EstimatedWords <= 0 ? WordCounter.CountNormalizedWhitespace(scene.VoiceOver) : scene.EstimatedWords;
         return scene;
     }
 
@@ -1527,7 +1529,7 @@ public sealed class ScriptService
             NewInformation = BuildSourceStepNewInformation(voiceOver, index),
             OnScreenText = ShortenForScreen(CapitalizeFirst(voiceOver), 42),
             OnScreenEmphasis = ShortenForScreen(CapitalizeFirst(voiceOver), 42),
-            EstimatedWords = CountWords(voiceOver),
+            EstimatedWords = WordCounter.CountNormalizedWhitespace(voiceOver),
             VisualDescription = $"Osoba wykonuje krok ze zrodla: {voiceOver}",
             SearchPhrase = searchPhrase,
             SearchPhrases = BuildSearchPhrasesForSourceStep(topic, step.Text, searchPhrase),
@@ -2055,7 +2057,7 @@ public sealed class ScriptService
         {
             "hook" => script.Hook,
             "ending" => script.Ending,
-            _ => script.Scenes.ElementAtOrDefault(ParseSceneIndex(segmentName))?.VoiceOver ?? script.Title
+            _ => script.Scenes.ElementAtOrDefault(SegmentIdParser.ParseSceneIndexOrDefault(segmentName))?.VoiceOver ?? script.Title
         };
         var phrase = BuildSearchPhraseFromText($"{text} {script.Title}");
         return new VisualPlanSegment
@@ -2079,13 +2081,6 @@ public sealed class ScriptService
         names.AddRange(script.Scenes.Select((_, index) => $"scene_{index + 1:00}"));
         names.Add("ending");
         return names;
-    }
-
-    private static int ParseSceneIndex(string segmentName)
-    {
-        return int.TryParse(segmentName.Replace("scene_", string.Empty, StringComparison.OrdinalIgnoreCase), out var value)
-            ? Math.Max(value - 1, 0)
-            : 0;
     }
 
     private static IEnumerable<string> ExtractSourceSentences(string sourceText)
@@ -2112,16 +2107,9 @@ public sealed class ScriptService
 
     private static int CountScriptWords(ShortScript script)
     {
-        return CountWords(script.Hook)
-            + CountWords(script.Ending)
-            + script.Scenes.Sum(scene => CountWords(scene.VoiceOver));
-    }
-
-    private static int CountWords(string value)
-    {
-        return NormalizeWhitespace(value)
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Length;
+        return WordCounter.CountNormalizedWhitespace(script.Hook)
+            + WordCounter.CountNormalizedWhitespace(script.Ending)
+            + script.Scenes.Sum(scene => WordCounter.CountNormalizedWhitespace(scene.VoiceOver));
     }
 
     private static string TakeWords(string value, int maxWords)
@@ -2546,7 +2534,7 @@ public sealed class ScriptService
             segment,
             report);
         scene.OnScreenEmphasis = scene.OnScreenText;
-        scene.EstimatedWords = scene.EstimatedWords <= 0 ? CountWords(scene.VoiceOver) : scene.EstimatedWords;
+        scene.EstimatedWords = scene.EstimatedWords <= 0 ? WordCounter.CountNormalizedWhitespace(scene.VoiceOver) : scene.EstimatedWords;
         scene.VisualDescription = NormalizeVisualDescription(scene.VisualDescription, scene, segment, report);
         scene.SearchPhrase = ResolveSceneSearchPhrase(scene, topic, segment, report);
         scene.SearchPhrases = scene.SearchPhrases
@@ -3064,15 +3052,7 @@ public sealed class ScriptService
         return string.IsNullOrWhiteSpace(scene.VoiceOver) ? scene.LegacyText ?? string.Empty : scene.VoiceOver;
     }
 
-    private static string NormalizeWhitespace(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        return Regex.Replace(value.Trim(), "\\s+", " ", RegexOptions.CultureInvariant);
-    }
+    private static string NormalizeWhitespace(string? value) => TextNormalizer.NormalizeWhitespace(value);
 
     private static bool ContainsStoryboardLanguage(string value)
     {

@@ -419,7 +419,7 @@ public static class QualityGateService
 
             var relatedToAnyScene = group.Any(item =>
             {
-                var index = ParseSceneIndex(item.Segment.SegmentName);
+                var index = SegmentIdParser.FindSceneIndexOrDefault(item.Segment.SegmentName);
                 var scene = script.Scenes.ElementAtOrDefault(index);
                 if (scene is null)
                 {
@@ -494,17 +494,6 @@ public static class QualityGateService
         }
 
         return string.Empty;
-    }
-
-    private static int ParseSceneIndex(string segmentName)
-    {
-        var match = System.Text.RegularExpressions.Regex.Match(
-            segmentName,
-            @"scene_(\d+)",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-        return match.Success && int.TryParse(match.Groups[1].Value, out var index)
-            ? index - 1
-            : -1;
     }
 
     private static string CanonicalizeVisualTerm(string term)

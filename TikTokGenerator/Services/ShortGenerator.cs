@@ -356,14 +356,7 @@ public sealed class ShortGenerator
         var outputRoot = Path.Combine(AppContext.BaseDirectory, "Output");
         Directory.CreateDirectory(outputRoot);
 
-        return Path.Combine(outputRoot, SanitizeFileName($"{DateTime.Now:yyyyMMdd-HHmmss}-{title}"));
-    }
-
-    private static string SanitizeFileName(string value)
-    {
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var sanitized = new string(value.Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray());
-        return sanitized.Length > 90 ? sanitized[..90] : sanitized;
+        return Path.Combine(outputRoot, FileNameSanitizer.ForProjectDirectory($"{DateTime.Now:yyyyMMdd-HHmmss}-{title}"));
     }
 
     private static int CalculateWordBudget(int durationSeconds)
@@ -387,14 +380,9 @@ public sealed class ShortGenerator
 
     private static int CountScriptWords(ShortScript script)
     {
-        return CountWords(script.Hook)
-            + CountWords(script.Ending)
-            + script.Scenes.Sum(scene => CountWords(scene.VoiceOver));
-    }
-
-    private static int CountWords(string value)
-    {
-        return value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
+        return WordCounter.CountSpaceSeparated(script.Hook)
+            + WordCounter.CountSpaceSeparated(script.Ending)
+            + script.Scenes.Sum(scene => WordCounter.CountSpaceSeparated(scene.VoiceOver));
     }
 
     private static IReadOnlyList<VoiceSegment> ApplyScriptMetadataToVoiceSegments(
@@ -429,7 +417,7 @@ public sealed class ShortGenerator
                     segment.VisualDescription);
             }
 
-            var sceneIndex = ParseSceneIndex(segment.Name);
+            var sceneIndex = SegmentIdParser.ParseSceneIndexOrDefault(segment.Name);
             var scene = script.Scenes.ElementAtOrDefault(sceneIndex);
             if (scene is null)
             {
@@ -476,10 +464,4 @@ public sealed class ShortGenerator
         };
     }
 
-    private static int ParseSceneIndex(string segmentName)
-    {
-        return int.TryParse(segmentName.Replace("scene_", string.Empty, StringComparison.OrdinalIgnoreCase), out var value)
-            ? Math.Max(value - 1, 0)
-            : 0;
-    }
 }

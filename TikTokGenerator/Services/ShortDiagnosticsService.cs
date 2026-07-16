@@ -248,7 +248,7 @@ internal static class ShortDiagnosticsService
                 Title = script.Title,
                 Hook = script.Hook,
                 Ending = script.Ending,
-                TotalVoiceWords = segmentInputs.Sum(segment => CountWords(segment.VoiceOver)),
+                TotalVoiceWords = segmentInputs.Sum(segment => WordCounter.CountSpaceSeparated(NormalizeForSearch(segment.VoiceOver))),
                 TotalVoiceCharacters = segmentInputs.Sum(segment => segment.VoiceOver.Length),
                 SourceKeywords = sourceKeywords,
                 ScriptKeywords = scriptKeywords,
@@ -331,7 +331,7 @@ internal static class ShortDiagnosticsService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(keyword => keyword, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        var wordCount = CountWords(input.VoiceOver);
+        var wordCount = WordCounter.CountSpaceSeparated(NormalizeForSearch(input.VoiceOver));
         var durationSeconds = input.Duration?.TotalSeconds ?? 0;
 
         return new SegmentDiagnostics
@@ -676,11 +676,6 @@ internal static class ShortDiagnosticsService
                 yield return pattern;
             }
         }
-    }
-
-    private static int CountWords(string value)
-    {
-        return NormalizeForSearch(value).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
     }
 
     private static bool IsGenericVisualDescription(string value)

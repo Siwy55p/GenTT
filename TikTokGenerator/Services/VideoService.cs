@@ -456,7 +456,7 @@ public sealed class VideoService : IVideoService
                 yield break;
             }
 
-            var share = CountWords(chunk) / (double)Math.Max(words.Length, 1);
+            var share = WordCounter.CountSpaceSeparated(chunk) / (double)Math.Max(words.Length, 1);
             var seconds = Math.Max(0.55, totalSeconds * share);
             var end = Math.Min(totalSeconds, cursor + seconds);
             yield return new SubtitleEvent(TimeSpan.FromSeconds(cursor), TimeSpan.FromSeconds(end), chunk);
@@ -516,11 +516,6 @@ public sealed class VideoService : IVideoService
         }
 
         return string.Join(Environment.NewLine, lines.Take(5));
-    }
-
-    private static int CountWords(string text)
-    {
-        return text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
     }
 
     private static string FormatAssTime(TimeSpan value)

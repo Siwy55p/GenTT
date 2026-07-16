@@ -73,7 +73,7 @@ public sealed class StockVideoService : IStockVideoService
 
             var filePath = Path.Combine(
                 outputDirectory,
-                $"{segment.Index:00}_{SanitizeFileName(segment.SearchPhrase)}.mp4");
+                $"{segment.Index:00}_{FileNameSanitizer.ForStockVideoFile(segment.SearchPhrase)}.mp4");
 
             await DownloadFileAsync(
                 selection.Provider,
@@ -889,14 +889,6 @@ public sealed class StockVideoService : IStockVideoService
             .ThenBy(file => Math.Abs(file.Width - 1080) + Math.Abs(file.Height - 1920))
             .ThenByDescending(file => file.Width * file.Height)
             .FirstOrDefault();
-    }
-
-    private static string SanitizeFileName(string value)
-    {
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var sanitized = new string(value.Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray());
-        sanitized = sanitized.Replace(' ', '_');
-        return sanitized.Length > 48 ? sanitized[..48] : sanitized;
     }
 
     private sealed class PexelsSearchResponse
