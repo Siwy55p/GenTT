@@ -252,6 +252,54 @@ public sealed class StockVideoServiceTests
         Assert.Equal(1, fixture.PixabaySearchRequestCount);
     }
 
+    [Fact]
+    public async Task DownloadVideosAsync_WhenOnlyPixabayApiKeyIsConfigured_SearchesPixabayWithConfiguredKey()
+    {
+        using var _ = new EnvironmentVariableScope("PEXELS_API_KEY", " ");
+        var pixabaySearchJson = """
+            {
+              "hits": [
+                {
+                  "id": 7788,
+                  "pageURL": "https://pixabay.com/videos/business-owner-laptop-planning-7788/",
+                  "tags": "small business, owner, planning, laptop",
+                  "duration": 8,
+                  "user": "Pixabay Tester",
+                  "videos": {
+                    "medium": {
+                      "url": "https://cdn.pixabay.test/pixabay-only.mp4",
+                      "width": 1080,
+                      "height": 1920,
+                      "thumbnail": "https://cdn.pixabay.test/pixabay-only.jpg"
+                    }
+                  }
+                }
+              ]
+            }
+            """;
+        using var fixture = StockVideoFixture.WithPixabayResponses(
+            [],
+            [(HttpStatusCode.OK, pixabaySearchJson)]);
+        var service = new StockVideoService(fixture.HttpClient);
+
+        var clips = await service.DownloadVideosAsync(
+            [CreateSegment("small business owner planning customer tasks", "business owner planning work on laptop")],
+            fixture.OutputDirectory,
+            new ShortGeneratorOptions
+            {
+                PixabayApiKey = "test-pixabay-key"
+            });
+
+        Assert.Single(clips);
+        Assert.Equal("https://pixabay.com/videos/business-owner-laptop-planning-7788/", clips[0].PexelsUrl);
+        Assert.Contains("provider=Pixabay", clips[0].SelectionReason);
+        Assert.Equal(0, fixture.SearchRequestCount);
+        Assert.Equal(1, fixture.PixabaySearchRequestCount);
+        Assert.NotNull(fixture.LastPixabaySearchRequestUri);
+        Assert.Contains("key=test-pixabay-key", fixture.LastPixabaySearchRequestUri!.Query);
+        Assert.Contains("q=small%20business%20owner%20planning%20customer%20tasks", fixture.LastPixabaySearchRequestUri.Query);
+    }
+
     private static VoiceSegment CreateSegment(
         string searchPhrase,
         string visualDescription = "Telefon z uporzadkowanym ekranem.")
@@ -306,6 +354,8 @@ public sealed class StockVideoServiceTests
 
         public int PixabaySearchRequestCount => Handler.PixabaySearchRequestCount;
 
+        public Uri? LastPixabaySearchRequestUri => Handler.LastPixabaySearchRequestUri;
+
         private StubHttpMessageHandler Handler { get; }
 
         public void Dispose()
@@ -315,6 +365,24 @@ public sealed class StockVideoServiceTests
             {
                 Directory.Delete(OutputDirectory, recursive: true);
             }
+        }
+    }
+
+    private sealed class EnvironmentVariableScope : IDisposable
+    {
+        private readonly string _name;
+        private readonly string? _previousValue;
+
+        public EnvironmentVariableScope(string name, string value)
+        {
+            _name = name;
+            _previousValue = Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
+            Environment.SetEnvironmentVariable(name, value, EnvironmentVariableTarget.Process);
+        }
+
+        public void Dispose()
+        {
+            Environment.SetEnvironmentVariable(_name, _previousValue, EnvironmentVariableTarget.Process);
         }
     }
 
@@ -337,6 +405,8 @@ public sealed class StockVideoServiceTests
 
         public int PixabaySearchRequestCount { get; private set; }
 
+        public Uri? LastPixabaySearchRequestUri { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -356,6 +426,7 @@ public sealed class StockVideoServiceTests
                 request.RequestUri.AbsolutePath.Contains("/api/videos", StringComparison.OrdinalIgnoreCase))
             {
                 PixabaySearchRequestCount++;
+                LastPixabaySearchRequestUri = request.RequestUri;
                 var response = _pixabaySearchResponses.Count == 0 ? _lastPixabaySearchResponse : _pixabaySearchResponses.Dequeue();
                 _lastPixabaySearchResponse = response;
                 return Task.FromResult(new HttpResponseMessage(response.StatusCode)

@@ -259,6 +259,73 @@ public sealed class ScriptServiceTests
     }
 
     [Fact]
+    public void ParseScriptOrFallback_WhenHookInventsUnsupportedMinutes_RewritesTitleHookAndScreenText()
+    {
+        var topic = new SelectedTopic
+        {
+            Title = "Nowa funkcja telefonu, ktora oszczedza czas",
+            SourceUrl = "offline://test",
+            SourceText = """
+            Temat roboczy: Nowa funkcja telefonu, ktora oszczedza czas
+            Kategoria: Technologia
+            Praktyczna teza: funkcja skrotow lub automatyzacji w telefonie moze oszczedzic czas przy powtarzalnej czynnosci.
+            Konkretne kroki: wybierz jedna czynnosc powtarzana codziennie, ustaw dla niej prosty skrot w telefonie, przetestuj skrot na jednej sytuacji.
+            Korzysc dla widza: widz wie, jak zaczac od jednej automatyzacji zamiast szukac wielu aplikacji.
+            Ograniczenia: nie podawaj nazw systemow, aplikacji ani obietnic ile minut da sie zaoszczedzic.
+            Nie dodawaj statystyk, procentow, nazw firm ani aktualnych danych.
+            """
+        };
+        var response = """
+            {
+              "title": "Jak oszczedzic 2 minuty dziennie z jednego skrotu",
+              "hook": "Czy wiesz, ze mozesz oszczedzic 2 minuty dziennie z jednego skrotu?",
+              "hookOnScreenText": "2 minuty dziennie z jednego skrotu",
+              "scenes": [
+                {
+                  "role": "action",
+                  "voiceOver": "Wybierz jedna czynnosc powtarzana codziennie.",
+                  "sourceFactIds": ["F1"],
+                  "newInformation": "wybierz jedna czynnosc powtarzana codziennie",
+                  "onScreenText": "Wybierz czynnosc",
+                  "searchPhrase": "close up smartphone productivity app"
+                },
+                {
+                  "role": "action",
+                  "voiceOver": "Ustaw dla niej prosty skrot w telefonie.",
+                  "sourceFactIds": ["F2"],
+                  "newInformation": "ustaw dla niej prosty skrot w telefonie",
+                  "onScreenText": "Ustaw skrot",
+                  "searchPhrase": "close up smartphone productivity app"
+                },
+                {
+                  "role": "proof",
+                  "voiceOver": "Przetestuj skrot na jednej sytuacji.",
+                  "sourceFactIds": ["F3"],
+                  "newInformation": "przetestuj skrot na jednej sytuacji",
+                  "onScreenText": "Przetestuj",
+                  "searchPhrase": "close up smartphone productivity app"
+                }
+              ],
+              "ending": "Wybierz jedna czynnosc i ustaw skrot w telefonie.",
+              "endingOnScreenText": "Ustaw skrot w telefonie"
+            }
+            """;
+
+        var script = ScriptService.ParseScriptOrFallback(response, topic, null, out var report);
+        var diagnostics = ShortDiagnosticsService.CreateScriptDiagnostics(topic, script);
+
+        Assert.Equal(topic.Title, script.Title);
+        Assert.DoesNotContain("2 minut", script.Hook, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("2 minut", script.HookOnScreenText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Skrot w telefonie", script.Hook, StringComparison.OrdinalIgnoreCase);
+        Assert.False(
+            diagnostics.Summary.HasUnsupportedClaims,
+            string.Join("; ", diagnostics.Issues.Select(issue => $"{issue.Code}: {issue.Evidence}")));
+        Assert.Contains(report.Issues, issue => issue.Segment == "title" && issue.Code == "unsupported_statistic");
+        Assert.Contains(report.Issues, issue => issue.Segment == "hook" && issue.Code == "unsupported_statistic");
+    }
+
+    [Fact]
     public void RepairScriptAfterReview_WhenHookPayoffIsRejected_UsesSourceStepsAsEnding()
     {
         var service = new ScriptService(new HttpClient());

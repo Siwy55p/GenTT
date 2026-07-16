@@ -2426,6 +2426,19 @@ public sealed class ScriptService
         var report = new ScriptQualityReport();
 
         script.Title = NormalizeWhitespace(script.Title);
+        if (ContainsUnsupportedNumberPhrase(script.Title, topic.SourceText))
+        {
+            AddIssue(
+                report,
+                "warning",
+                "title",
+                "unsupported_statistic",
+                "Tytul zawieral liczbe, procent albo czas, ktorego nie bylo w materiale zrodlowym. Zastapiono go tytulem tematu.",
+                script.Title,
+                topic.Title);
+            script.Title = topic.Title;
+        }
+
         if (string.IsNullOrWhiteSpace(script.Title))
         {
             AddIssue(
@@ -2446,7 +2459,7 @@ public sealed class ScriptService
             AddIssue(report, "warning", "hook", "missing_hook", "Brakowalo hooka, wiec zbudowano lokalny hook.", string.Empty, script.Hook);
         }
 
-        script.HookOnScreenText = NormalizeScreenText(script.HookOnScreenText, script.Hook, "hook", report);
+        script.HookOnScreenText = NormalizeScreenText(script.HookOnScreenText, script.Hook, topic, "hook", report);
 
         script.Ending = NormalizeVoiceText(script.Ending, topic, "ending", report);
         if (string.IsNullOrWhiteSpace(script.Ending))
@@ -2455,7 +2468,7 @@ public sealed class ScriptService
             AddIssue(report, "warning", "ending", "missing_ending", "Brakowalo zakonczenia, wiec zbudowano lokalne zakonczenie.", string.Empty, script.Ending);
         }
 
-        script.EndingOnScreenText = NormalizeScreenText(script.EndingOnScreenText, script.Ending, "ending", report);
+        script.EndingOnScreenText = NormalizeScreenText(script.EndingOnScreenText, script.Ending, topic, "ending", report);
 
         script.Scenes = script.Scenes
             .Where(scene => !string.IsNullOrWhiteSpace(GetSceneVoiceOver(scene)))
@@ -2529,6 +2542,7 @@ public sealed class ScriptService
         scene.OnScreenText = NormalizeScreenText(
             string.IsNullOrWhiteSpace(scene.OnScreenText) ? scene.OnScreenEmphasis : scene.OnScreenText,
             scene.VoiceOver,
+            topic,
             segment,
             report);
         scene.OnScreenEmphasis = scene.OnScreenText;
@@ -2651,7 +2665,7 @@ public sealed class ScriptService
         var original = NormalizeWhitespace(value);
         var normalized = original;
 
-        if (ContainsUnsupportedStatistic(normalized, topic.SourceText))
+        if (ContainsUnsupportedNumberPhrase(normalized, topic.SourceText))
         {
             normalized = BuildFactSafeVoiceOver(topic, segment, normalized);
             AddIssue(
@@ -2659,7 +2673,7 @@ public sealed class ScriptService
                 "warning",
                 segment,
                 "unsupported_statistic",
-                "Tekst zawieral liczbe lub procent, ktorego nie bylo w materiale zrodlowym. Zastapiono go bezpieczna wersja bez statystyki.",
+                "Tekst zawieral liczbe, procent albo czas, ktorego nie bylo w materiale zrodlowym. Zastapiono go bezpieczna wersja bez statystyki.",
                 original,
                 normalized);
         }
@@ -2685,6 +2699,7 @@ public sealed class ScriptService
     private static string NormalizeScreenText(
         string value,
         string voiceOver,
+        SelectedTopic topic,
         string segment,
         ScriptQualityReport report)
     {
@@ -2716,6 +2731,20 @@ public sealed class ScriptService
                 segment,
                 "storyboard_in_on_screen_text",
                 "Napis ekranowy brzmial jak opis sceny. Skrocono go do hasla dla widza.",
+                normalized,
+                fixedValue);
+            normalized = fixedValue;
+        }
+
+        if (ContainsUnsupportedNumberPhrase(normalized, topic.SourceText))
+        {
+            var fixedValue = BuildFactSafeOnScreenText(topic, segment, voiceOver);
+            AddIssue(
+                report,
+                "warning",
+                segment,
+                "unsupported_statistic",
+                "Napis ekranowy zawieral liczbe, procent albo czas, ktorego nie bylo w materiale zrodlowym. Zastapiono go bezpieczna wersja.",
                 normalized,
                 fixedValue);
             normalized = fixedValue;
@@ -3094,32 +3123,51 @@ public sealed class ScriptService
             : "Wybierz jeden maly krok i sprawdz efekt jeszcze dzis.";
     }
 
-    private static bool ContainsUnsupportedStatistic(string value, string sourceText)
-    {
-        foreach (Match match in Regex.Matches(value, "\\b\\d+(?:[,.]\\d+)?\\s*(?:%|procent|proc\\.)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-        {
-            if (!sourceText.Contains(match.Value, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private static string BuildFactSafeVoiceOver(SelectedTopic topic, string segment, string original)
     {
+        var context = SourceAnalysisDiagnosticsService.Normalize($"{topic.Title} {topic.SourceText}");
+        if (context.Contains("telefon", StringComparison.OrdinalIgnoreCase)
+            && (context.Contains("skrot", StringComparison.OrdinalIgnoreCase)
+                || context.Contains("automatyzac", StringComparison.OrdinalIgnoreCase)))
+        {
+            return segment.Equals("ending", StringComparison.OrdinalIgnoreCase)
+                ? "Wybierz powtarzalna czynnosc, ustaw skrot w telefonie i przetestuj go w praktyce."
+                : "Skrot w telefonie moze oszczedzic czas przy powtarzalnej czynnosci.";
+        }
+
         if (segment.Equals("hook", StringComparison.OrdinalIgnoreCase))
         {
-            return $"Masz temat \"{topic.Title}\"? Zacznij od jednej rzeczy, ktora od razu porzadkuje dzialanie.";
+            return "Zacznij od praktycznego kroku, ktory wynika z materialu zrodlowego.";
         }
 
         if (segment.Equals("ending", StringComparison.OrdinalIgnoreCase))
         {
-            return "Najlepszy test jest prosty: zrob jeden krok i sprawdz, czy pomaga.";
+            return "Wykonaj krok ze zrodla i sprawdz efekt w praktyce.";
         }
 
-        return "Zamiast opierac sie na statystyce, wybierz jeden praktyczny krok i sprawdz go w swoim dniu.";
+        return "Wykonaj praktyczny krok opisany w materiale zrodlowym.";
+    }
+
+    private static string BuildFactSafeOnScreenText(SelectedTopic topic, string segment, string voiceOver)
+    {
+        var candidate = BuildOnScreenText(voiceOver);
+        if (!string.IsNullOrWhiteSpace(candidate)
+            && !ContainsUnsupportedNumberPhrase(candidate, topic.SourceText))
+        {
+            return candidate;
+        }
+
+        var fixedVoiceOver = BuildFactSafeVoiceOver(topic, segment, voiceOver);
+        candidate = BuildOnScreenText(fixedVoiceOver);
+        if (!string.IsNullOrWhiteSpace(candidate)
+            && !ContainsUnsupportedNumberPhrase(candidate, topic.SourceText))
+        {
+            return candidate;
+        }
+
+        return segment.Equals("hook", StringComparison.OrdinalIgnoreCase)
+            ? "Krok ze zrodla"
+            : "Sprawdz krok";
     }
 
     private static string BuildOnScreenText(string voiceOver)

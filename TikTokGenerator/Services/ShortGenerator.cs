@@ -65,7 +65,14 @@ public sealed class ShortGenerator
             progress?.Report(new ShortGenerationProgress(28, "Recenzuje merytoryke"));
             var contentReview = await _scriptService.ReviewScriptAsync(topic, sourceAnalysis, script, options, logger, cancellationToken);
             await logger.SaveJsonAsync("content-review-initial.json", contentReview, cancellationToken);
-            if (ShouldRepairAfterReview(contentReview))
+            var preRepairDiagnostics = ShortDiagnosticsService.CreateScriptDiagnostics(topic, script);
+            if (preRepairDiagnostics.Summary.HasUnsupportedClaims)
+            {
+                await logger.SaveJsonAsync("script-analysis-before-review-repair.json", preRepairDiagnostics, cancellationToken);
+                logger.Warning("Local script diagnostics found unsupported claims after content review. Repairing even though the reviewer may have approved the script.");
+            }
+
+            if (ShouldRepairAfterReview(contentReview) || preRepairDiagnostics.Summary.HasUnsupportedClaims)
             {
                 progress?.Report(new ShortGenerationProgress(31, "Poprawiam scenariusz po recenzji"));
                 script = _scriptService.RepairScriptAfterReview(topic, sourceAnalysis, script, contentReview, logger);

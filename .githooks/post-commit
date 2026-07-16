@@ -1,0 +1,24 @@
+#!/bin/sh
+#
+# Creates a project ZIP after commits whose message contains the word "skip".
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$repo_root" ]; then
+  exit 0
+fi
+
+script_path="$repo_root/scripts/CreateProjectZipOnSkip.ps1"
+if [ ! -f "$script_path" ]; then
+  echo "ZIP export script not found: $script_path"
+  exit 0
+fi
+
+if command -v pwsh >/dev/null 2>&1; then
+  pwsh -NoProfile -ExecutionPolicy Bypass -File "$script_path"
+elif command -v powershell.exe >/dev/null 2>&1; then
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$script_path"
+elif command -v powershell >/dev/null 2>&1; then
+  powershell -NoProfile -ExecutionPolicy Bypass -File "$script_path"
+else
+  echo "PowerShell is required to create the project ZIP."
+fi
